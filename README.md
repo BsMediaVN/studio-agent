@@ -1,5 +1,13 @@
 # VietVoice Studio
 
+<p align="center">
+  <img src="image/thumbnail/thumbnail.png" alt="VietVoice Studio — self-hosted Vietnamese voice and talking-head video studio: multi-character TTS plus a prompt-to-video lip-sync pipeline" width="100%">
+</p>
+
+<p align="center">
+  <em>Two jobs, one app: a multi-character Vietnamese <strong>TTS Studio</strong>, and a <strong>Video Generator</strong> that turns a face image + prompt into a lip-synced talking-head video.</em>
+</p>
+
 **Self-hosted studio for producing Vietnamese voice & talking-character video — from a single prompt.**
 
 VietVoice Studio turns a text prompt or script into multi-character Vietnamese audio, and can drive a full **prompt → talking-head video** pipeline that runs entirely on your own machine. It is built on top of the open-source [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) speech engine.
