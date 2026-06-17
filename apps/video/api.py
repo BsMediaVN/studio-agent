@@ -1,0 +1,338 @@
+"""Video Pipeline API — FastAPI endpoints for video generation.
+
+Registers endpoints on the existing studio_app router.
+Follows patterns from studio_api.py: JobManager, WebSocket progress,
+Pydantic validation, background tasks.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import re
+import shutil
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Literal
+
+from fastapi import Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+
+_OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output" / "studio" / "video"
+_MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+# ---------------------------------------------------------------------------
+# Pydantic Models
+# ---------------------------------------------------------------------------
+
+class VideoGenerateRequest(BaseModel):
+    """Request parameters for video generation."""
+
+    prompt: str = Field(min_length=1, max_length=2000)
+    voice_id: str
+    target_duration_s: float = Field(default=30.0, ge=5, le=120)
+    burn_subtitles: bool = True
+    body_test_mode: bool = True  # True until Mixamo assets available
+
+
+class VideoStatusResponse(BaseModel):
+    """Video pipeline status."""
+
+    face_engine_available: bool
+    body_renderer_ready: bool
+    video_pipeline_enabled: bool
+
+
+# ---------------------------------------------------------------------------
+# VideoProducer — API-layer wrapper
+# ---------------------------------------------------------------------------
+
+class VideoProducer:
+    """Manages video generation jobs: file I/O, job tracking, background tasks."""
+
+    def __init__(self, pipeline: Any, job_manager: Any):
+        from apps.video.pipeline import VideoPipeline
+        self._pipeline: VideoPipeline = pipeline
+        self._jobs = job_manager
+        self._output_files: dict[str, str] = {}
+
+    async def start_job(
+        self,
+        face_image: UploadFile,
+        config: VideoGenerateRequest,
+    ) -> str:
+        """Validate image, create job, launch pipeline in background."""
+        # Create job (JobManager generates the job_id)
+        job_id = await self._jobs.create_job()
+
+        # Validate and save face image
+        face_path = await self._save_face_image(face_image, job_id)
+
+        # Build pipeline config
+        from apps.video.pipeline import PipelineConfig
+
+        pipeline_config = PipelineConfig(
+            voice_id=config.voice_id,
+            target_duration_s=config.target_duration_s,
+            burn_subtitles=config.burn_subtitles,
+            body_test_mode=config.body_test_mode,
+        )
+
+        # Launch in background
+        async def _run() -> None:
+            t0 = time.monotonic()
+            try:
+                loop = asyncio.get_running_loop()
+
+                def _progress(pct: int, msg: str) -> None:
+                    loop.call_soon_threadsafe(
+                        asyncio.ensure_future,
+                        self._jobs.update(
+                            job_id,
+                            progress=pct,
+                            current_step=msg,
+                        ),
+                    )
+
+                output = await self._pipeline.produce(
+                    job_id=job_id,
+                    face_image=face_path,
+                    dialogue_text=config.prompt,
+                    config=pipeline_config,
+                    progress_cb=_progress,
+                )
+
+                self._output_files[job_id] = str(output)
+                duration_ms = round((time.monotonic() - t0) * 1000)
+                await self._jobs.update(
+                    job_id,
+                    status="complete",
+                    progress=100,
+                    current_step="Done",
+                    result_url=f"/studio/video/download/{job_id}",
+                )
+                logger.info(
+                    "video_production_completed job_id=%s duration_ms=%d",
+                    job_id, duration_ms,
+                )
+
+            except Exception as e:
+                logger.exception("Video production failed job_id=%s", job_id)
+                await self._jobs.update(
+                    job_id, status="error", error=str(e)[:500],
+                )
+                # Cleanup failed job directory
+                job_dir = _OUTPUT_DIR / job_id
+                if job_dir.exists():
+                    shutil.rmtree(job_dir, ignore_errors=True)
+
+        asyncio.create_task(_run())
+
+        logger.info(
+            "video_production_queued job_id=%s voice=%s duration_target=%s",
+            job_id, config.voice_id, config.target_duration_s,
+        )
+        return job_id
+
+    async def _save_face_image(
+        self, face_image: UploadFile, job_id: str,
+    ) -> Path:
+        """Validate and save uploaded face image."""
+        # Read content
+        content = await face_image.read()
+
+        # Validate size
+        if len(content) > _MAX_IMAGE_SIZE:
+            raise HTTPException(
+                413, f"Image too large ({len(content) / 1e6:.1f}MB). Max: 10MB"
+            )
+
+        if len(content) < 100:
+            raise HTTPException(400, "Image file is empty or too small")
+
+        # Validate image type via PIL (imghdr removed in Python 3.13)
+        import io
+        try:
+            from PIL import Image
+            img = Image.open(io.BytesIO(content))
+            img_format = (img.format or "").lower()  # Read before verify
+            img.verify()
+        except Exception:
+            raise HTTPException(400, "Invalid or corrupt image file")
+
+        if img_format not in ("png", "jpeg", "bmp", "gif"):
+            raise HTTPException(
+                400,
+                f"Invalid image type: {img_format}. "
+                f"Allowed: PNG, JPEG, BMP",
+            )
+
+        # Save to job directory
+        job_dir = _OUTPUT_DIR / job_id
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+        ext = ".png" if img_format == "png" else ".jpg"
+        face_path = job_dir / f"input_face{ext}"
+        face_path.write_bytes(content)
+
+        logger.info(
+            "Face image saved: %s (%d bytes, type=%s)",
+            face_path.name, len(content), img_format,
+        )
+        return face_path
+
+    def get_output_path(self, job_id: str) -> str | None:
+        """Get output file path for a completed job."""
+        return self._output_files.get(job_id)
+
+
+# ---------------------------------------------------------------------------
+# Module-level state (initialized by init_video_pipeline)
+# ---------------------------------------------------------------------------
+
+video_producer: VideoProducer | None = None
+_tts_manager_ref: Any = None  # Stored reference to avoid import issues
+
+
+def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
+    """Initialize video pipeline components.
+
+    Called from studio_api.py init_studio() or standalone.
+    """
+    global video_producer, _tts_manager_ref
+    _tts_manager_ref = tts_manager
+
+    from apps.video.face.animator import FaceAnimator
+    from apps.video.body.renderer import BodyRenderer
+    from apps.video.voice.generator import VoiceGenerator
+    from apps.video.composer.composer import VideoComposer
+    from apps.video.pipeline import VideoPipeline
+
+    face_anim = FaceAnimator(backend="sadtalker")
+    voice_gen = VoiceGenerator(tts_manager, extract_timestamps=True)
+    body_renderer = BodyRenderer(fps=30, width=1280, height=720)
+    composer = VideoComposer()
+
+    pipeline = VideoPipeline(
+        voice_gen=voice_gen,
+        face_anim=face_anim,
+        body_renderer=body_renderer,
+        composer=composer,
+    )
+
+    video_producer = VideoProducer(pipeline, job_manager)
+    _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "Video pipeline initialized: face=%s, body=%dx%d",
+        face_anim.backend.name, body_renderer.width, body_renderer.height,
+    )
+
+
+def register_video_endpoints(studio_app: Any) -> None:
+    """Register video pipeline endpoints on the studio FastAPI app.
+
+    Call this after creating studio_app in studio_api.py.
+    """
+
+    @studio_app.post("/video/generate")
+    async def generate_video(
+        face_image: UploadFile,
+        prompt: str = Form(..., min_length=1, max_length=2000),
+        voice_id: str = Form(...),
+        target_duration_s: float = Form(30.0, ge=5, le=120),
+        burn_subtitles: bool = Form(True),
+        body_test_mode: bool = Form(True),
+    ) -> dict[str, str]:
+        """Start a video generation job.
+
+        Upload a face image + provide text prompt.
+        Returns job_id for progress tracking via WebSocket.
+        """
+        if video_producer is None:
+            raise HTTPException(503, "Video pipeline not initialized")
+
+        # Disk space check
+        _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        free_space = shutil.disk_usage(_OUTPUT_DIR).free
+        if free_space < 500 * 1024 * 1024:
+            raise HTTPException(
+                507,
+                f"Insufficient disk space: {free_space / 1e6:.0f}MB free",
+            )
+
+        # Validate voice_id (match studio_api.py pattern — 503 if not loaded)
+        if not _tts_manager_ref or not _tts_manager_ref.is_loaded:
+            raise HTTPException(503, "TTS engine not loaded yet")
+        available = set(_tts_manager_ref.voice_cache.keys())
+        if voice_id not in available:
+            raise HTTPException(
+                422,
+                f"Unknown voice_id '{voice_id}'. Available: {sorted(available)}",
+            )
+
+        config = VideoGenerateRequest(
+            prompt=prompt,
+            voice_id=voice_id,
+            target_duration_s=target_duration_s,
+            burn_subtitles=burn_subtitles,
+            body_test_mode=body_test_mode,
+        )
+
+        job_id = await video_producer.start_job(face_image, config)
+        return {"status": "ok", "job_id": job_id}
+
+    @studio_app.get("/video/download/{job_id}")
+    async def download_video(job_id: str) -> FileResponse:
+        """Download the generated video file."""
+        # Validate job_id format
+        if not re.match(r'^[a-zA-Z0-9]+$', job_id):
+            raise HTTPException(400, "Invalid job_id format")
+
+        if video_producer is None:
+            raise HTTPException(503, "Video pipeline not initialized")
+
+        file_path = video_producer.get_output_path(job_id)
+        if not file_path:
+            raise HTTPException(404, "Video not found or job not complete")
+
+        resolved = Path(file_path).resolve()
+        safe_dir = _OUTPUT_DIR.resolve()
+
+        # Path traversal guard
+        if not resolved.is_relative_to(safe_dir):
+            raise HTTPException(403, "Forbidden")
+
+        if not resolved.exists():
+            raise HTTPException(404, "Video file not found on disk")
+
+        return FileResponse(
+            str(resolved),
+            media_type="video/mp4",
+            filename=f"video_{job_id}.mp4",
+        )
+
+    @studio_app.get("/video/status")
+    async def video_status() -> dict[str, Any]:
+        """Get video pipeline status."""
+        if video_producer is None:
+            return VideoStatusResponse(
+                face_engine_available=False,
+                body_renderer_ready=False,
+                video_pipeline_enabled=False,
+            ).model_dump()
+
+        from apps.video.face.animator import FaceAnimator
+
+        return VideoStatusResponse(
+            face_engine_available=video_producer._pipeline._face_anim.is_available,
+            body_renderer_ready=True,
+            video_pipeline_enabled=True,
+        ).model_dump()
+
+    logger.info("Video pipeline endpoints registered")

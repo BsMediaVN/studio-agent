@@ -1,0 +1,80 @@
+text_settings:
+  max_chars_per_chunk: 256
+  max_total_chars_streaming: 3000
+
+backbone_configs:
+  "VieNeu-TTS (GPU)":
+    repo: pnnbao-ump/VieNeu-TTS
+    supports_streaming: false
+    description: Chất lượng cao nhất, yêu cầu GPU
+  "VieNeu-TTS-0.3B (GPU)":
+    repo: pnnbao-ump/VieNeu-TTS-0.3B
+    supports_streaming: false
+    description: Phiên bản nhẹ cho GPU, tốc độ nhanh x2 so với phiên bản gốc 
+  "VieNeu-TTS-q8-gguf":
+    repo: pnnbao-ump/VieNeu-TTS-q8-gguf
+    supports_streaming: true
+    description: Phiên bản GGUF có chất lượng cao nhất
+  "VieNeu-TTS-q4-gguf":
+    repo: pnnbao-ump/VieNeu-TTS-q4-gguf
+    supports_streaming: true
+    description: Cân bằng giữa chất lượng và tốc độ
+  "VieNeu-TTS-0.3B-q4-gguf":
+    repo: pnnbao-ump/VieNeu-TTS-0.3B-q4-gguf
+    supports_streaming: true
+    description: Phiên bản cực nhẹ, chạy mượt trên CPU
+  "VieNeu-TTS-0.3B-q8-gguf":
+    repo: pnnbao-ump/VieNeu-TTS-0.3B-q8-gguf
+    supports_streaming: true
+    description: Phiên bản 0.3B nén Q8, chất lượng cao và tốc độ nhanh trên CPU
+
+studio:
+  enabled: true
+  backbone_repo: pnnbao-ump/VieNeu-TTS-0.3B-q8-gguf
+  codec_repo: neuphonic/distill-neucodec
+  backbone_device: cpu
+  codec_device: cpu
+  port: 8001
+
+  llm:
+    provider: claude
+    claude:
+      model: claude-sonnet-4-20250514
+    openai:
+      model: gpt-4o
+
+  audio:
+    output_dir: ./output/studio
+    default_format: wav
+    normalize: true
+    silence_gap: 0.3
+    crossfade: 0.0
+    sample_rate: 24000
+
+  voices:
+    max_characters: 4
+    auto_assign: true
+    presets:
+      male: [Binh, Tuyen, Vinh]
+      female: [Doan, Ly, Ngoc]
+
+  limits:
+    max_script_chars: 10000
+    max_concurrent_jobs: 1
+    job_timeout_minutes: 10
+    cleanup_hours: 1
+
+codec_configs:
+  "NeuCodec (Standard)":
+    repo: neuphonic/neucodec
+    description: Codec chuẩn, tốc độ trung bình
+    use_preencoded: false
+  "NeuCodec (Distill)":
+    repo: neuphonic/distill-neucodec
+    description: Codec tối ưu, tốc độ cao
+    use_preencoded: false
+  "NeuCodec ONNX (Fast CPU)":
+    repo: neuphonic/neucodec-onnx-decoder-int8
+    description: Tối ưu cho CPU, cần pre-encoded codes
+    use_preencoded: true
+

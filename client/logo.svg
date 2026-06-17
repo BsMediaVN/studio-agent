@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#84cc16"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="mic" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="60%" stop-color="#84cc16"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="book" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#84cc16"/>
+    </linearGradient>
+  </defs>
+  <!-- Book/Page with flame -->
+  <g transform="translate(10, 15)">
+    <!-- Book shape -->
+    <path d="M5,90 Q5,30 15,25 L55,20 Q60,20 60,25 L60,85 Q60,90 55,90 Z" fill="url(#book)" opacity="0.9"/>
+    <path d="M60,25 Q65,20 70,25 L70,85 Q70,90 65,90 L60,90 L60,25Z" fill="url(#book)" opacity="0.7"/>
+    <!-- Flame -->
+    <path d="M35,5 Q50,25 45,40 Q55,30 50,15 Q65,35 55,55 Q50,62 40,62 Q30,62 25,55 Q15,35 35,5Z" fill="url(#flame)"/>
+    <path d="M37,25 Q45,35 42,45 Q48,40 45,32 Q52,42 45,52 Q42,56 38,56 Q34,56 31,52 Q24,42 37,25Z" fill="#fff" opacity="0.3"/>
+  </g>
+  <!-- Sound waves -->
+  <g transform="translate(105, 20)">
+    <rect x="0" y="40" width="6" height="40" rx="3" fill="url(#wave)"/>
+    <rect x="12" y="30" width="6" height="60" rx="3" fill="url(#wave)"/>
+    <rect x="24" y="15" width="6" height="90" rx="3" fill="url(#wave)"/>
+    <rect x="36" y="5" width="6" height="110" rx="3" fill="url(#wave)"/>
+    <rect x="48" y="15" width="6" height="90" rx="3" fill="url(#wave)"/>
+    <rect x="60" y="25" width="6" height="70" rx="3" fill="url(#wave)"/>
+    <rect x="72" y="35" width="6" height="50" rx="3" fill="url(#wave)"/>
+    <rect x="84" y="25" width="6" height="70" rx="3" fill="url(#wave)"/>
+    <rect x="96" y="10" width="6" height="100" rx="3" fill="url(#wave)"/>
+    <rect x="108" y="20" width="6" height="80" rx="3" fill="url(#wave)"/>
+    <rect x="120" y="35" width="6" height="50" rx="3" fill="url(#wave)"/>
+  </g>
+  <!-- Microphone -->
+  <g transform="translate(260, 10)">
+    <!-- Mic head -->
+    <ellipse cx="50" cy="30" rx="25" ry="30" fill="url(#mic)"/>
+    <!-- Mic grill lines -->
+    <line x1="32" y1="20" x2="68" y2="20" stroke="#fff" stroke-width="1.5" opacity="0.3"/>
+    <line x1="30" y1="28" x2="70" y2="28" stroke="#fff" stroke-width="1.5" opacity="0.3"/>
+    <line x1="30" y1="36" x2="70" y2="36" stroke="#fff" stroke-width="1.5" opacity="0.3"/>
+    <line x1="32" y1="44" x2="68" y2="44" stroke="#fff" stroke-width="1.5" opacity="0.3"/>
+    <!-- Mic body -->
+    <path d="M38,55 L38,80 Q38,85 42,85 L58,85 Q62,85 62,80 L62,55" fill="url(#mic)"/>
+    <!-- Mic holder lines -->
+    <line x1="28" y1="38" x2="35" y2="38" stroke="url(#mic)" stroke-width="3" stroke-linecap="round"/>
+    <line x1="65" y1="38" x2="72" y2="38" stroke="url(#mic)" stroke-width="3" stroke-linecap="round"/>
+    <!-- Stand -->
+    <rect x="46" y="85" width="8" height="15" rx="2" fill="#16a34a"/>
+    <ellipse cx="50" cy="102" rx="18" ry="5" fill="#16a34a" opacity="0.8"/>
+  </g>
+</svg>

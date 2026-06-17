@@ -1,0 +1,4 @@
+# Ignore GLB model files (large, downloaded from Mixamo)
+*.glb
+*.fbx
+!.gitignore

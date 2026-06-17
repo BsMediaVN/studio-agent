@@ -1,0 +1,9 @@
+# Generated validation report
+validation_report.md
+# Puppeteer node_modules
+node_modules/
+package-lock.json
+# Test artifacts
+test_*.png
+test_*.webm
+test_*.mp4

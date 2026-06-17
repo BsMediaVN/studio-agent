@@ -1,0 +1,48 @@
+x-base-config: &base-config
+  volumes:
+    - ./:/workspace # Hot-reload: mount local code
+    - huggingface_cache:/root/.cache/huggingface
+    - ./output_audio:/workspace/output_audio
+    - uv_cache:/root/.cache/uv # Persist UV cache để tránh download lại packages
+    - pip_cache:/root/.cache/pip # Persist pip cache (cho các packages install bằng pip)
+  env_file:
+    - path: .env
+      required: false # Không báo lỗi nếu thiếu file .env
+  environment:
+    - PORT=${PORT:-7860}
+    - GRADIO_SERVER_PORT=${GRADIO_SERVER_PORT:-7860}
+    - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+    - GRADIO_SHARE=${GRADIO_SHARE:-0}
+    - HF_HOME=${HF_HOME:-/root/.cache/huggingface}
+    - PYTHONUNBUFFERED=1
+    - PHONEMIZER_ESPEAK_LIBRARY=/usr/lib/x86_64-linux-gnu/libespeak-ng.so.1
+  stdin_open: true # Support interactive shell
+  tty: true
+  ports:
+    - "${PORT:-7860}:${GRADIO_SERVER_PORT:-7860}"
+  command: ["uv", "run", "apps/gradio_main.py"]
+
+services:
+  # ========================================================
+  # GPU Profile
+  # ========================================================
+  gpu:
+    <<: *base-config
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+      target: dev
+    container_name: vieneu-tts-gpu-dev
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  huggingface_cache:
+  uv_cache: # Cache directory cho uv (packages, wheels)
+  pip_cache: # Cache directory cho pip (nếu có packages install bằng pip)

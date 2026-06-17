@@ -1,0 +1,44 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+
+# Virtual environments
+.venv
+.xpu_venv
+outputs/
+.env
+
+# Finetune Data & Checkpoints
+finetune/dataset/
+finetune/output/
+
+# Merged Models
+merged_models_cache/
+
+# Logs
+apps/logs/*.log
+
+# Temp output
+output/
+
+# Models (large files)
+models/
+
+# macOS
+.DS_Store
+
+.claude/
+node_modules/
+client/out/
+client/.next/
+
+# Local-only agent context (not for public repo)
+CLAUDE.md
+
+# Plans
+plans/

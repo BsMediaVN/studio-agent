@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VietVoice Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Display:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" />
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0%25' y1='100%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2384cc16'/%3E%3Cstop offset='50%25' stop-color='%23f59e0b'/%3E%3Cstop offset='100%25' stop-color='%23ef4444'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='%231a1a2e'/%3E%3Crect x='25' y='30' width='5' height='40' rx='2.5' fill='url(%23f)'/%3E%3Crect x='35' y='20' width='5' height='60' rx='2.5' fill='url(%23f)'/%3E%3Crect x='45' y='10' width='5' height='80' rx='2.5' fill='url(%23f)'/%3E%3Crect x='55' y='20' width='5' height='60' rx='2.5' fill='url(%23f)'/%3E%3Crect x='65' y='30' width='5' height='40' rx='2.5' fill='url(%23f)'/%3E%3C/svg%3E">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans"', 'sans-serif'],
+                        display: ['"Noto Sans Display"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        slate: { 850: '#151e2e', 900: '#0f172a', 950: '#020617' },
+                        primary: { 400: '#2dd4bf', 500: '#14b8a6', 600: '#0f766e' },
+                        amber: { 500: '#f59e0b' }
+                    },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-0: #070b12; --bg-1: #0b1220; --bg-2: #0a1f22;
+            --surface: rgba(12, 19, 33, 0.78); --surface-2: rgba(8, 14, 26, 0.74);
+            --border: rgba(148, 163, 184, 0.18);
+            --text-1: #f8fafc; --text-2: #94a3b8;
+            --accent-1: #2dd4bf; --accent-2: #f59e0b; --accent-3: #fb7185;
+            --placeholder: rgba(148, 163, 184, 0.6);
+        }
+        [data-theme="light"] {
+            --bg-0: #f8fafc; --bg-1: #f1f5f9; --bg-2: #e2e8f0;
+            --surface: #ffffff; --surface-2: #f8fafc;
+            --border: #cbd5e1;
+            --text-1: #0f172a; --text-2: #334155;
+            --accent-1: #0ea5a4; --accent-2: #f59e0b; --accent-3: #fb7185;
+            --placeholder: rgba(15, 23, 42, 0.45);
+        }
+        body {
+            background: radial-gradient(1200px circle at 8% 8%, rgba(45,212,191,0.12), transparent 55%),
+                radial-gradient(900px circle at 92% 12%, rgba(245,158,11,0.16), transparent 55%),
+                linear-gradient(160deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+            color: var(--text-1); font-family: "Noto Sans", sans-serif;
+            letter-spacing: 0.005em; min-height: 100vh;
+        }
+        [data-theme="light"] body {
+            background: radial-gradient(900px circle at 10% 10%, rgba(14,165,164,0.12), transparent 55%),
+                radial-gradient(800px circle at 90% 15%, rgba(245,158,11,0.14), transparent 55%),
+                linear-gradient(160deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .app-shell { position: relative; overflow: hidden; }
+        .grid-overlay {
+            position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px);
+            background-size: 80px 80px; opacity: 0.4;
+            mask-image: radial-gradient(circle at 50% 10%, rgba(0,0,0,0.9), transparent 75%);
+            pointer-events: none;
+        }
+        [data-theme="light"] .grid-overlay { opacity: 0.18; }
+        .ambient-orb {
+            position: absolute; width: 420px; height: 420px; border-radius: 999px;
+            filter: blur(90px); opacity: 0.6; animation: float-slow 14s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .orb-1 { top: -12%; left: -8%; background: rgba(45,212,191,0.28); }
+        .orb-2 { top: 10%; right: -12%; background: rgba(245,158,11,0.26); animation-delay: 1.5s; }
+        .orb-3 { bottom: -18%; left: 40%; background: rgba(251,113,133,0.2); animation-delay: 3s; }
+        [data-theme="light"] .ambient-orb { opacity: 0.3; }
+        .surface-card {
+            background: linear-gradient(180deg, var(--surface), var(--surface-2));
+            border: 1px solid var(--border); box-shadow: 0 32px 80px rgba(2,6,23,0.7); border-radius: 28px;
+        }
+        [data-theme="light"] .surface-card { background: var(--surface); box-shadow: 0 26px 60px rgba(15,23,42,0.12); }
+        .panel-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+            padding: 20px; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08);
+        }
+        .label-text { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-2); font-weight: 600; }
+        .text-main { color: var(--text-1); }
+        .text-muted { color: var(--text-2); }
+        .chip {
+            padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border);
+            background: var(--surface-2); font-size: 10px; letter-spacing: 0.18em;
+            text-transform: uppercase; color: var(--text-2);
+        }
+        .chip-warn { color: #fef3c7; border-color: rgba(245,158,11,0.6); background: rgba(245,158,11,0.18); font-weight: 700; }
+        [data-theme="light"] .chip-warn { color: #7c2d12; background: rgba(245,158,11,0.28); border-color: rgba(245,158,11,0.7); }
+        .title-text { font-family: "Noto Sans Display", sans-serif; font-weight: 700; letter-spacing: 0.01em; }
+        .input-frame {
+            position: relative; border-radius: 22px; padding: 2px;
+            background: linear-gradient(130deg, rgba(45,212,191,0.22), rgba(245,158,11,0.22));
+        }
+        .input-area {
+            width: 100%; min-height: 380px; height: clamp(560px, 68vh, 760px);
+            background: var(--surface-2); color: var(--text-1); padding: 26px; border-radius: 20px;
+            border: 1px solid var(--border); outline: none; resize: vertical; font-size: 17px; line-height: 1.75;
+        }
+        .input-area::placeholder { color: var(--placeholder); }
+        .select-control {
+            width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+            color: var(--text-1); padding: 14px 16px; padding-right: 44px; border-radius: 14px;
+            font-size: 15px; outline: none; appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+            background-repeat: no-repeat; background-position: right 14px center; background-size: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .select-control:hover { border-color: rgba(20,184,166,0.35); }
+        .select-control:focus { border-color: rgba(20,184,166,0.6); box-shadow: 0 0 0 3px rgba(20,184,166,0.2); }
+        [data-theme="light"] .select-control {
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+        }
+        .select-control option { background: var(--surface); color: var(--text-1); }
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; border-radius: 16px; padding: 12px 18px; font-weight: 700; color: #08121c;
+            background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+            box-shadow: 0 16px 30px rgba(20,184,166,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 20px 40px rgba(20,184,166,0.32); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+        .btn-stop {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; border-radius: 16px; padding: 12px 18px; font-weight: 600; color: #f8fafc;
+            border: 1px solid rgba(248,113,133,0.6); background: rgba(248,113,133,0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-stop:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(248,113,133,0.2); }
+        .btn-secondary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; border-radius: 14px; padding: 10px 14px; font-weight: 600;
+            color: var(--text-1); background: var(--surface-2); border: 1px solid var(--border);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(15,23,42,0.12); }
+        .status-chip {
+            display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+            border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
+            text-transform: uppercase; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 999px; background: #64748b; }
+        .status-playing { border-color: rgba(45,212,191,0.4); color: #5eead4; }
+        .status-playing .status-dot { background: #2dd4bf; animation: pulse-slow 2s infinite; }
+        .status-connecting { border-color: rgba(245,158,11,0.4); color: #fcd34d; }
+        .status-connecting .status-dot { background: #f59e0b; animation: pulse-slow 1.4s infinite; }
+        .status-error { border-color: rgba(248,113,133,0.5); color: #fda4af; }
+        .status-error .status-dot { background: #fb7185; }
+        .status-completed { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+        .status-completed .status-dot { background: #22c55e; }
+        .visualizer-card {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px;
+            padding: 12px; position: relative; overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(15,23,42,0.2), 0 16px 40px rgba(2,6,23,0.45);
+        }
+        [data-theme="light"] .visualizer-card { box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08), 0 20px 40px rgba(15,23,42,0.12); }
+        .visualizer-label {
+            position: absolute; top: 10px; left: 12px; font-size: 10px;
+            font-family: "JetBrains Mono", monospace; letter-spacing: 0.24em;
+            text-transform: uppercase; color: rgba(148,163,184,0.7); z-index: 2;
+        }
+        .visualizer-card::before {
+            content: ""; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px);
+            background-size: 32px 32px; opacity: 0.2; pointer-events: none;
+        }
+        [data-theme="light"] .visualizer-card::before { opacity: 0.1; }
+        .visualizer-card::after {
+            content: ""; position: absolute; inset: -40% -10% auto; height: 60%;
+            background: radial-gradient(circle, rgba(45,212,191,0.25), transparent 70%);
+            opacity: 0.6; pointer-events: none;
+        }
+        [data-theme="light"] .visualizer-card::after { opacity: 0.25; }
+        .visualizer-card canvas { position: relative; z-index: 1; filter: drop-shadow(0 12px 30px rgba(45,212,191,0.35)); }
+        .theme-switch {
+            position: relative; width: 56px; height: 28px; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--surface-2);
+            display: inline-flex; align-items: center; padding: 2px;
+            transition: background 0.2s ease, box-shadow 0.2s ease; overflow: hidden;
+        }
+        .theme-switch:hover { box-shadow: 0 12px 24px rgba(2,6,23,0.2); }
+        .theme-switch .thumb {
+            width: 22px; height: 22px; border-radius: 999px;
+            background: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+            transform: translateX(2px); transition: transform 0.2s ease;
+            box-shadow: 0 8px 16px rgba(15,23,42,0.2);
+        }
+        .theme-switch.is-light .thumb { transform: translateX(30px); }
+        .theme-switch .icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0.6; pointer-events: none; }
+        .theme-switch .icon-sun { left: 8px; }
+        .theme-switch .icon-moon { right: 8px; }
+        .theme-switch.is-light .icon-sun { opacity: 1; }
+        .theme-switch.is-dark .icon-moon { opacity: 1; }
+        .reveal { animation: reveal-up 0.7s ease both; }
+        .footer-note { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-2); opacity: 0.7; }
+        @keyframes float-slow { 0% { transform: translateY(0) translateX(0); } 50% { transform: translateY(18px) translateX(-10px); } 100% { transform: translateY(0) translateX(0); } }
+        @keyframes reveal-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) { .input-area { height: 520px; } }
+
+        /* Tab styles */
+        .tab-bar { display: flex; gap: 4px; padding: 4px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); }
+        .tab-btn {
+            padding: 8px 20px; border-radius: 12px; font-size: 13px; font-weight: 600;
+            letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2);
+            transition: all 0.2s ease; cursor: pointer; border: none; background: transparent;
+        }
+        .tab-btn:hover { color: var(--text-1); }
+        .tab-btn.active {
+            background: linear-gradient(120deg, rgba(45,212,191,0.15), rgba(245,158,11,0.1));
+            color: var(--accent-1); border: 1px solid rgba(45,212,191,0.3);
+        }
+
+        /* Studio-specific */
+        .script-editor {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+            padding: 16px; font-family: "JetBrains Mono", monospace; font-size: 13px;
+            line-height: 1.8; max-height: 400px; overflow-y: auto; white-space: pre-wrap;
+        }
+        .char-badge {
+            display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+            border-radius: 999px; font-size: 11px; font-weight: 600;
+        }
+        .progress-bar-bg {
+            width: 100%; height: 8px; border-radius: 999px; background: var(--surface-2);
+            border: 1px solid var(--border); overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+            transition: width 0.3s ease;
+        }
+        .waveform-container {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+            padding: 16px; min-height: 100px;
+        }
+
+        /* Drawflow overrides for dark theme */
+        .drawflow { background: var(--surface-2) !important; border-radius: 14px; }
+        .drawflow .drawflow-node {
+            background: var(--surface) !important; border: 1px solid var(--border) !important;
+            border-radius: 14px !important; color: var(--text-1) !important; min-width: 180px;
+            box-shadow: 0 8px 24px rgba(2,6,23,0.4) !important;
+        }
+        .drawflow .drawflow-node.selected { border-color: var(--accent-1) !important; box-shadow: 0 0 0 2px rgba(45,212,191,0.3) !important; }
+        .drawflow .drawflow-node .title-box {
+            background: linear-gradient(120deg, rgba(45,212,191,0.15), rgba(245,158,11,0.1)) !important;
+            border-bottom: 1px solid var(--border) !important; border-radius: 14px 14px 0 0 !important;
+            padding: 8px 14px !important; font-weight: 600 !important; font-size: 12px !important;
+            letter-spacing: 0.1em !important; text-transform: uppercase !important;
+        }
+        .drawflow .drawflow-node .box { padding: 10px 14px !important; font-size: 13px !important; }
+        .drawflow .connection .main-path { stroke: var(--accent-1) !important; stroke-width: 2 !important; }
+        .drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+            background: var(--accent-1) !important; border: 2px solid var(--surface) !important;
+        }
+        .drawflow .drawflow-delete { background: var(--accent-3) !important; color: white !important; border: none !important; }
+        .node-label { color: var(--text-2); font-size: 11px; margin-top: 4px; }
+        .node-config { color: var(--accent-1); font-family: "JetBrains Mono", monospace; font-size: 11px; margin-top: 6px; }
+        .wf-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+        .wf-card:hover { border-color: rgba(45,212,191,0.3); }
+        .wf-webhook { font-family: "JetBrains Mono", monospace; font-size: 11px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; word-break: break-all; }
+    </style>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <link rel="stylesheet" href="https://unpkg.com/drawflow@0.0.60/dist/drawflow.min.css" />
+    <script src="https://unpkg.com/drawflow@0.0.60/dist/drawflow.min.js"></script>
+</head>
+
+<body>
+    <div id="root" suppressHydrationWarning="true"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useCallback } = React;
+
+        const StreamStatus = { IDLE: 'IDLE', CONNECTING: 'CONNECTING', PLAYING: 'PLAYING', COMPLETED: 'COMPLETED', ERROR: 'ERROR' };
+        const SAMPLE_RATE = 24000;
+        const SEGMENT_CHAR_SIZE = 160;
+        const API_URL = '';
+        const CHAR_COLORS = [
+            { bg: 'rgba(45,212,191,0.15)', border: 'rgba(45,212,191,0.4)', text: '#5eead4' },
+            { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: '#fcd34d' },
+            { bg: 'rgba(251,113,133,0.15)', border: 'rgba(251,113,133,0.4)', text: '#fda4af' },
+            { bg: 'rgba(129,140,248,0.15)', border: 'rgba(129,140,248,0.4)', text: '#a5b4fc' },
+        ];
+
+        // ==========================================
+        // ICONS
+        // ==========================================
+        const Spinner = ({ className }) => (
+            <svg className={className} style={{ animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="20" height="20">
+                <circle opacity="0.25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path opacity="0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            </svg>
+        );
+
+        // ==========================================
+        // VISUALIZER (existing)
+        // ==========================================
+        const Visualizer = ({ isPlaying, externalContext, externalSource }) => {
+            const canvasRef = useRef(null);
+            const analyserRef = useRef(null);
+            const animationFrameRef = useRef(0);
+
+            useEffect(() => {
+                if (isPlaying && externalContext && externalContext.state !== 'closed') {
+                    analyserRef.current = externalSource;
+                }
+            }, [isPlaying, externalContext, externalSource]);
+
+            useEffect(() => {
+                const renderFrame = () => {
+                    const canvas = canvasRef.current;
+                    const analyser = externalSource || analyserRef.current;
+                    if (!canvas || !analyser) return;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return;
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyser.getByteFrequencyData(dataArray);
+                    const dpr = window.devicePixelRatio || 1;
+                    const width = canvas.clientWidth || 600;
+                    const height = canvas.clientHeight || 120;
+                    canvas.width = width * dpr; canvas.height = height * dpr;
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    ctx.clearRect(0, 0, width, height);
+                    const barCount = 64;
+                    const step = Math.max(1, Math.floor(bufferLength / barCount));
+                    const barWidth = width / barCount;
+                    const maxHeight = height - 12;
+                    const gradient = ctx.createLinearGradient(0, height, 0, 0);
+                    gradient.addColorStop(0, 'rgba(45,212,191,0.9)');
+                    gradient.addColorStop(0.55, 'rgba(245,158,11,0.9)');
+                    gradient.addColorStop(1, 'rgba(251,113,133,0.85)');
+                    ctx.shadowColor = 'rgba(45,212,191,0.4)'; ctx.shadowBlur = 18;
+                    for (let i = 0; i < barCount; i++) {
+                        const value = dataArray[i * step];
+                        const barHeight = Math.max(6, (value / 255) * maxHeight);
+                        const x = i * barWidth;
+                        ctx.globalAlpha = 0.35 + (value / 255) * 0.65;
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath(); ctx.roundRect(x + 1.5, height - barHeight, barWidth - 3, barHeight, 6); ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                    animationFrameRef.current = requestAnimationFrame(renderFrame);
+                };
+                if (isPlaying) renderFrame();
+                else {
+                    cancelAnimationFrame(animationFrameRef.current);
+                    const canvas = canvasRef.current;
+                    if (canvas) { const ctx = canvas.getContext('2d'); ctx?.clearRect(0, 0, canvas.width, canvas.height); }
+                }
+                return () => cancelAnimationFrame(animationFrameRef.current);
+            }, [isPlaying, externalSource]);
+
+            return (
+                <div className="visualizer-card h-32 flex items-end justify-center">
+                    <div className="visualizer-label">Live Spectrum</div>
+                    <canvas ref={canvasRef} width={600} height={100} className="w-full h-full" />
+                </div>
+            );
+        };
+
+        // ==========================================
+        // STUDIO TAB
+        // ==========================================
+        const StudioTab = ({ settings, studioVoices }) => {
+            const [studioMode, setStudioMode] = useState('dialogue'); // 'dialogue' or 'story'
+            const [prompt, setPrompt] = useState('');
+            const [script, setScript] = useState(null);
+            const [voiceMap, setVoiceMap] = useState({});
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [jobId, setJobId] = useState(null);
+            const [progress, setProgress] = useState({ status: 'idle', progress: 0, current_step: '' });
+            const [audioUrl, setAudioUrl] = useState(null);
+            const [error, setError] = useState(null);
+            const wavesurferRef = useRef(null);
+            const waveContainerRef = useRef(null);
+            const wsRef = useRef(null);
+
+            // Auto-assign voices when script is generated
+            const autoAssignVoices = useCallback((characters) => {
+                if (!Array.isArray(characters) || characters.length === 0) return;
+                const malePools = studioVoices.filter(v => ['Binh','Tuyen','Vinh'].includes(v.id));
+                const femalePools = studioVoices.filter(v => ['Doan','Ly','Ngoc'].includes(v.id));
+                let mi = 0, fi = 0;
+                const map = {};
+                characters.forEach(c => {
+                    if (c.voice_id && studioVoices.find(v => v.id === c.voice_id)) {
+                        map[c.name] = c.voice_id;
+                    } else if (c.gender === 'M' && malePools.length > 0) {
+                        map[c.name] = malePools[mi % malePools.length].id;
+                        mi++;
+                    } else if (c.gender === 'F' && femalePools.length > 0) {
+                        map[c.name] = femalePools[fi % femalePools.length].id;
+                        fi++;
+                    } else if (studioVoices.length > 0) {
+                        map[c.name] = studioVoices[0].id;
+                    }
+                });
+                setVoiceMap(map);
+            }, [studioVoices]);
+
+            const handleGenerateScript = async () => {
+                if (!prompt.trim()) return;
+                setIsGenerating(true); setError(null); setScript(null); setAudioUrl(null);
+                try {
+                    const res = await fetch(`${API_URL}/studio/generate-script`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, max_characters: settings.maxCharacters || 4, language: 'vi', mode: studioMode })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.script) {
+                        setScript(data.script);
+                        autoAssignVoices(data.script.characters);
+                    } else {
+                        setError(data.detail || 'Failed to generate script');
+                    }
+                } catch (e) {
+                    setError('Network error: ' + e.message);
+                } finally {
+                    setIsGenerating(false);
+                }
+            };
+
+            const handleProduce = async () => {
+                if (!script) return;
+                setError(null); setProgress({ status: 'queued', progress: 0, current_step: 'Starting...' });
+                setAudioUrl(null);
+                try {
+                    const res = await fetch(`${API_URL}/studio/produce`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            script,
+                            voice_map: voiceMap,
+                            silence_gap: settings.silenceGap,
+                            crossfade: settings.crossfade,
+                            output_format: settings.outputFormat,
+                            normalize: settings.normalize,
+                            temperature: settings.temperature || 0.8,
+                            top_k: settings.topK || 50,
+                            speed: settings.targetDuration ? 1.0 : (settings.speed || 1.0),
+                            ...(settings.targetDuration ? { target_duration_s: settings.targetDuration } : {}),
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.job_id) {
+                        setJobId(data.job_id);
+                        connectProgress(data.job_id);
+                    } else {
+                        setError(data.detail || 'Failed to start production');
+                        setProgress({ status: 'idle', progress: 0, current_step: '' });
+                    }
+                } catch (e) {
+                    setError('Network error: ' + e.message);
+                    setProgress({ status: 'idle', progress: 0, current_step: '' });
+                }
+            };
+
+            const pollRef = useRef(false);
+
+            const connectProgress = (jid) => {
+                if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+                pollRef.current = false;
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const ws = new WebSocket(`${protocol}//${window.location.host}/studio/progress/${jid}`);
+                wsRef.current = ws;
+                ws.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    setProgress(data);
+                    if (data.status === 'complete') {
+                        setAudioUrl(`${API_URL}/studio/download/${jid}`);
+                        ws.close();
+                    } else if (data.status === 'error') {
+                        setError(data.error || 'Production failed');
+                        ws.close();
+                    }
+                };
+                ws.onerror = () => { setError('WebSocket connection failed. Falling back to polling.');
+                    pollProgress(jid);
+                };
+            };
+
+            const pollProgress = async (jid) => {
+                pollRef.current = true;
+                const poll = async () => {
+                    if (!pollRef.current) return;
+                    try {
+                        const res = await fetch(`${API_URL}/studio/job/${jid}`);
+                        const data = await res.json();
+                        setProgress(data);
+                        if (data.status === 'complete') {
+                            setAudioUrl(`${API_URL}/studio/download/${jid}`);
+                            pollRef.current = false; return;
+                        } else if (data.status === 'error') {
+                            setError(data.error || 'Production failed');
+                            pollRef.current = false; return;
+                        }
+                        setTimeout(poll, 1000);
+                    } catch (e) { if (pollRef.current) setTimeout(poll, 2000); }
+                };
+                poll();
+            };
+
+            // WaveSurfer init
+            useEffect(() => {
+                if (audioUrl && waveContainerRef.current) {
+                    if (wavesurferRef.current) wavesurferRef.current.destroy();
+                    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+                    wavesurferRef.current = WaveSurfer.create({
+                        container: waveContainerRef.current,
+                        waveColor: isDark ? 'rgba(45,212,191,0.5)' : 'rgba(14,165,164,0.4)',
+                        progressColor: isDark ? '#2dd4bf' : '#0ea5a4',
+                        cursorColor: '#f59e0b',
+                        barWidth: 2, barGap: 1, barRadius: 2, height: 80, responsive: true,
+                    });
+                    wavesurferRef.current.load(audioUrl);
+                }
+                return () => { if (wavesurferRef.current) wavesurferRef.current.destroy(); };
+            }, [audioUrl]);
+
+            // Cleanup WS + poll on unmount
+            useEffect(() => { return () => { if (wsRef.current) wsRef.current.close(); pollRef.current = false; }; }, []);
+
+            const totalLines = script ? script.scenes.reduce((acc, s) => acc + s.dialogue.length, 0) : 0;
+            const isProducing = progress.status === 'processing' || progress.status === 'queued';
+
+            return (
+                <div className="space-y-6">
+                    {/* Mode Toggle */}
+                    <div className="flex items-center gap-3">
+                        {[
+                            { id: 'dialogue', label: 'Video Dialogue', desc: 'Pure character conversations' },
+                            { id: 'story', label: 'Story / Audiobook', desc: 'Narrator + character dialogue' },
+                        ].map(m => (
+                            <button key={m.id} onClick={() => setStudioMode(m.id)}
+                                className={`flex-1 panel-card text-left transition-all ${studioMode === m.id
+                                    ? 'border-primary-500/40 shadow-lg shadow-primary-500/10' : 'opacity-60 hover:opacity-80'}`}
+                                style={studioMode === m.id ? { borderColor: 'rgba(45,212,191,0.4)' } : {}}>
+                                <div className="font-semibold text-sm text-main">{m.label}</div>
+                                <div className="text-xs text-muted mt-1">{m.desc}</div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Target Duration */}
+                    <div className="panel-card space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="label-text" style={{ marginBottom: 0 }}>Target Duration</label>
+                            <span className="font-mono text-xs px-2 py-0.5 rounded-full"
+                                style={{
+                                    background: settings.targetDuration
+                                        ? 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(245,158,11,0.15))'
+                                        : 'rgba(255,255,255,0.05)',
+                                    color: settings.targetDuration ? '#2dd4bf' : '#64748b',
+                                    border: '1px solid ' + (settings.targetDuration ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.08)'),
+                                }}>
+                                {settings.targetDuration
+                                    ? `${Math.floor(settings.targetDuration / 60)}:${String(Math.round(settings.targetDuration % 60)).padStart(2, '0')}`
+                                    : 'Auto'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {[
+                                { label: 'Auto', value: null },
+                                { label: '30s', value: 30 },
+                                { label: '1m', value: 60 },
+                                { label: '2m', value: 120 },
+                                { label: '5m', value: 300 },
+                            ].map(p => (
+                                <button key={p.label}
+                                    onClick={() => updateSetting('targetDuration', p.value)}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                                    style={{
+                                        background: settings.targetDuration === p.value || (!settings.targetDuration && p.value === null)
+                                            ? 'linear-gradient(135deg, rgba(45,212,191,0.2), rgba(45,212,191,0.1))'
+                                            : 'rgba(255,255,255,0.04)',
+                                        border: '1px solid ' + (settings.targetDuration === p.value || (!settings.targetDuration && p.value === null)
+                                            ? 'rgba(45,212,191,0.4)' : 'rgba(255,255,255,0.08)'),
+                                        color: settings.targetDuration === p.value || (!settings.targetDuration && p.value === null)
+                                            ? '#2dd4bf' : '#94a3b8',
+                                        boxShadow: settings.targetDuration === p.value || (!settings.targetDuration && p.value === null)
+                                            ? '0 0 12px rgba(45,212,191,0.1)' : 'none',
+                                    }}>
+                                    {p.label}
+                                </button>
+                            ))}
+                            <div className="flex items-center gap-1 ml-auto">
+                                <input type="number" min="1" max="600" step="1"
+                                    value={settings.targetDuration || ''}
+                                    placeholder="Custom"
+                                    onChange={(e) => updateSetting('targetDuration',
+                                        e.target.value ? Math.max(1, Math.min(600, parseFloat(e.target.value))) : null)}
+                                    className="w-20 px-2 py-1.5 rounded-lg text-xs font-mono text-center transition-all"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.04)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#e2e8f0',
+                                        outline: 'none',
+                                    }}
+                                    onFocus={(e) => e.target.style.borderColor = 'rgba(45,212,191,0.4)'}
+                                    onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                                />
+                                <span className="text-xs text-muted">sec</span>
+                            </div>
+                        </div>
+                        {settings.targetDuration && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                    <div className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${Math.min(100, (settings.targetDuration / 300) * 100)}%`,
+                                            background: 'linear-gradient(90deg, #2dd4bf, #f59e0b)',
+                                        }} />
+                                </div>
+                                <span className="text-xs text-muted whitespace-nowrap">
+                                    {settings.targetDuration >= 60
+                                        ? `${Math.floor(settings.targetDuration / 60)}m ${Math.round(settings.targetDuration % 60)}s`
+                                        : `${settings.targetDuration}s`}
+                                </span>
+                            </div>
+                        )}
+                        <p className="text-xs" style={{ color: '#475569' }}>
+                            Audio output will be adjusted to match the target length. Speed is auto-calculated.
+                        </p>
+                    </div>
+
+                    {/* Prompt Input */}
+                    <div className="panel-card space-y-4">
+                        <label className="label-text">Production Prompt</label>
+                        <div className="input-frame">
+                            <textarea
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                placeholder={studioMode === 'story'
+                                    ? "Describe your story... e.g. 'Cau chuyen ve mot chang trai gap lai ban cu sau 10 nam xa cach'"
+                                    : "Describe your dialogue scene... e.g. 'Cuoc hoi thoai giua hai ban ve ke hoach cuoi tuan'"}
+                                className="input-area"
+                                style={{ minHeight: '120px', height: '120px' }}
+                                spellCheck="false"
+                            />
+                        </div>
+                        <button
+                            onClick={handleGenerateScript}
+                            disabled={isGenerating || !prompt.trim() || isProducing}
+                            className="btn-primary"
+                        >
+                            {isGenerating ? <><Spinner /> Generating Script...</> : 'Generate Script'}
+                        </button>
+                    </div>
+
+                    {error && (
+                        <div className="panel-card border-red-500/30" style={{ borderColor: 'rgba(248,113,133,0.4)' }}>
+                            <p className="text-sm" style={{ color: '#fda4af' }}>{error}</p>
+                        </div>
+                    )}
+
+                    {/* Script Editor + Voice Assignment */}
+                    {script && (
+                        <div className="grid gap-6 lg:grid-cols-[1fr_0.4fr]">
+                            {/* Script Display */}
+                            <div className="panel-card space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="label-text">Script: {script.title}</label>
+                                    <span className="chip">{totalLines} lines</span>
+                                </div>
+                                <div className="script-editor">
+                                    {script.scenes.map((scene, si) => (
+                                        <div key={si}>
+                                            {scene.setting && <div className="text-muted text-xs mb-2 italic">[{scene.setting}]</div>}
+                                            {scene.dialogue.map((line, li) => {
+                                                const isNarration = line.line_type === 'narration' || line.character === 'Narrator';
+                                                const charIdx = script.characters.findIndex(c => c.name === line.character);
+                                                const color = isNarration
+                                                    ? { bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.3)', text: '#94a3b8' }
+                                                    : CHAR_COLORS[Math.max(0, charIdx) % CHAR_COLORS.length];
+                                                return (
+                                                    <div key={`${si}-${li}`} className={`mb-2 ${isNarration ? 'pl-0 italic' : 'pl-4'}`}>
+                                                        <span className="char-badge" style={{
+                                                            background: color.bg, border: `1px solid ${color.border}`, color: color.text
+                                                        }}>
+                                                            {isNarration ? 'Narrator' : line.character}
+                                                        </span>
+                                                        {' '}
+                                                        <span className={isNarration ? 'text-muted' : 'text-main'}>{line.text}</span>
+                                                        {!isNarration && line.emotion !== 'neutral' && (
+                                                            <span className="text-xs text-muted ml-2">({line.emotion})</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Voice Assignment */}
+                            <div className="space-y-4">
+                                <div className="panel-card space-y-4">
+                                    <label className="label-text">Voice Assignment</label>
+                                    {script.characters.map((char, ci) => {
+                                        const color = CHAR_COLORS[ci % CHAR_COLORS.length];
+                                        return (
+                                            <div key={char.name} className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="char-badge" style={{
+                                                        background: color.bg, border: `1px solid ${color.border}`, color: color.text
+                                                    }}>
+                                                        {char.name}
+                                                    </span>
+                                                    <span className="chip">{char.gender === 'M' ? 'Nam' : 'Nu'}</span>
+                                                </div>
+                                                <select
+                                                    className="select-control"
+                                                    style={{ padding: '10px 14px', fontSize: '13px' }}
+                                                    value={voiceMap[char.name] || ''}
+                                                    onChange={(e) => setVoiceMap(prev => ({ ...prev, [char.name]: e.target.value }))}
+                                                >
+                                                    {studioVoices.map(v => (
+                                                        <option key={v.id} value={v.id}>{v.name || v.id}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Produce Button */}
+                                <div className="panel-card space-y-4">
+                                    <button
+                                        onClick={handleProduce}
+                                        disabled={isProducing || !script}
+                                        className="btn-primary"
+                                    >
+                                        {isProducing ? <><Spinner /> Producing...</> : 'Produce Audio'}
+                                    </button>
+
+                                    {/* Export Script + Save to Series */}
+                                    {script && (
+                                        <div className="flex gap-2">
+                                            <button className="btn-secondary flex-1 text-sm"
+                                                onClick={() => {
+                                                    const blob = new Blob([JSON.stringify({script: script, voice_map: voiceMap}, null, 2)], {type:'application/json'});
+                                                    const a = document.createElement('a');
+                                                    a.href = URL.createObjectURL(blob);
+                                                    a.download = `script_${(script.title||'untitled').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30)}.json`;
+                                                    a.click(); URL.revokeObjectURL(a.href);
+                                                }}>
+                                                Export Script
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Progress */}
+                                    {(isProducing || progress.status === 'complete') && (
+                                        <div className="space-y-2">
+                                            <div className="progress-bar-bg">
+                                                <div className="progress-bar-fill" style={{ width: `${progress.progress || 0}%` }} />
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted">{progress.current_step || ''}</span>
+                                                <span className="font-mono" style={{ color: 'var(--accent-1)' }}>{progress.progress || 0}%</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Audio Player */}
+                    {audioUrl && (
+                        <div className="panel-card space-y-4">
+                            <div className="flex items-center justify-between">
+                                <label className="label-text">Output</label>
+                                <div className={`status-chip status-completed`}>
+                                    <span className="status-dot"></span>
+                                    <span className="font-mono">Complete</span>
+                                </div>
+                            </div>
+                            <div className="waveform-container" ref={waveContainerRef}></div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => wavesurferRef.current?.playPause()}
+                                    className="btn-secondary flex-1"
+                                >
+                                    Play / Pause
+                                </button>
+                                <a href={audioUrl} download className="btn-secondary flex-1 text-center no-underline">
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ===== Series / Audiobook Section ===== */}
+                    <SeriesSection lastScript={script} lastVoiceMap={voiceMap} studioVoices={studioVoices} />
+                </div>
+            );
+        };
+
+
+        // ==========================================
+        // SERIES SECTION (within Studio Tab)
+        // ==========================================
+
+        const SeriesCard = ({ series, expanded, onToggle, onContinue, onMerge, onDelete,
+                              onExport, onUpdateSeries, continuing, merging, studioVoices,
+                              continueHint, setContinueHint }) => {
+            const totalDuration = series.episodes.reduce((sum, e) => sum + (e.duration_s || 0), 0);
+            const fmtDur = (s) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+            const [showSettings, setShowSettings] = useState(false);
+            const [editingEp, setEditingEp] = useState(null); // ep_num being edited
+            const [editScript, setEditScript] = useState('');
+            const [reproducing, setReproducing] = useState(null);
+
+            const startEdit = (ep) => {
+                if (editingEp === ep.episode_num) { setEditingEp(null); return; }
+                // Format dialogue lines as editable text
+                const lines = [];
+                if (ep.script_data && ep.script_data.scenes) {
+                    ep.script_data.scenes.forEach(scene => {
+                        scene.dialogue.forEach(d => {
+                            lines.push(`[${d.character}] ${d.text}`);
+                        });
+                    });
+                }
+                setEditScript(lines.join('\n'));
+                setEditingEp(ep.episode_num);
+            };
+
+            const handleReproduce = async (ep) => {
+                setReproducing(ep.episode_num);
+                try {
+                    // Parse edited text back to script_data
+                    const lines = editScript.split('\n').filter(l => l.trim());
+                    const dialogue = lines.map(line => {
+                        const match = line.match(/^\[([^\]]+)\]\s*(.+)/);
+                        if (match) {
+                            const charName = match[1];
+                            const text = match[2];
+                            const isNarrator = charName.toLowerCase() === 'narrator';
+                            return {
+                                character: charName,
+                                text: text,
+                                emotion: 'neutral',
+                                pause_after_ms: isNarrator ? 500 : 300,
+                                line_type: isNarrator ? 'narration' : 'dialogue',
+                            };
+                        }
+                        return { character: 'Narrator', text: line, emotion: 'neutral', pause_after_ms: 500, line_type: 'narration' };
+                    });
+
+                    const newScript = {
+                        ...ep.script_data,
+                        scenes: [{ scene_num: 1, setting: '', dialogue }],
+                    };
+
+                    const res = await fetch(`${API_URL}/studio/series/${series.id}/episodes/${ep.episode_num}/reproduce`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ script_data: newScript })
+                    });
+                    if (res.ok) {
+                        setEditingEp(null);
+                        // Trigger parent reload
+                        onUpdateSeries(series.id, {});
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(err.detail || 'Re-produce failed');
+                    }
+                } catch (e) { console.error(e); alert('Network error'); }
+                setReproducing(null);
+            };
+
+            const updateVoice = (charName, voiceId) => {
+                const newMap = { ...series.voice_map, [charName]: voiceId };
+                onUpdateSeries(series.id, { voice_map: newMap });
+            };
+
+            return (
+                <div className="panel-card" style={{
+                    borderLeft: '3px solid var(--accent-1)',
+                    background: 'rgba(12,19,33,0.6)',
+                    backdropFilter: 'blur(12px)'
+                }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between cursor-pointer" onClick={onToggle}>
+                        <div>
+                            <h4 className="font-semibold" style={{color:'var(--text-1)'}}>{series.title}</h4>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                                <span className="chip">{series.episodes.length} eps</span>
+                                <span className="chip">{fmtDur(totalDuration)}</span>
+                                <span className="chip">{series.mode}</span>
+                                {series.speed !== 1.0 && <span className="chip">{series.speed}x</span>}
+                            </div>
+                        </div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                            className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+                            style={{color:'var(--text-2)'}}>
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+
+                    {expanded && (
+                        <div className="mt-4 space-y-3">
+                            {/* Voice Assignment */}
+                            {series.characters && series.characters.length > 0 && (
+                                <div className="p-3 rounded-xl space-y-2" style={{background:'var(--surface-2)', border:'1px solid var(--border)'}}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold" style={{color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.05em'}}>Voice Assignment</span>
+                                    </div>
+                                    {series.characters.map(c => (
+                                        <div key={c.name} className="flex items-center gap-2">
+                                            <span className="text-sm flex-shrink-0 w-24 truncate" style={{color:'var(--text-1)'}}>
+                                                {c.name} <span style={{color:'var(--text-2)', fontSize:'0.7rem'}}>({c.gender || '?'})</span>
+                                            </span>
+                                            <select
+                                                value={series.voice_map[c.name] || ''}
+                                                onChange={e => updateVoice(c.name, e.target.value)}
+                                                style={{
+                                                    flex:1, padding:'0.35rem 0.5rem', borderRadius:'0.5rem',
+                                                    background:'var(--bg-1)', border:'1px solid var(--border)',
+                                                    color:'var(--text-1)', fontSize:'0.8rem',
+                                                }}>
+                                                <option value="">Auto</option>
+                                                {studioVoices.map(v => (
+                                                    <option key={v.id} value={v.id}>{v.id} ({v.name || v.id})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Settings toggle */}
+                            <button className="text-xs flex items-center gap-1" onClick={() => setShowSettings(!showSettings)}
+                                style={{color:'var(--text-2)', background:'none', border:'none', cursor:'pointer', padding:0}}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                                </svg>
+                                {showSettings ? 'Hide Settings' : 'Settings'}
+                            </button>
+
+                            {showSettings && (
+                                <div className="p-3 rounded-xl space-y-3" style={{background:'var(--surface-2)', border:'1px solid var(--border)'}}>
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs" style={{color:'var(--text-2)'}}>Speed</label>
+                                            <span className="font-mono text-xs" style={{color:'var(--accent-1)'}}>{(series.speed || 1.0).toFixed(1)}x</span>
+                                        </div>
+                                        <input type="range" min="0.5" max="2.0" step="0.1" value={series.speed || 1.0}
+                                            onChange={e => onUpdateSeries(series.id, { speed: parseFloat(e.target.value) })}
+                                            className="w-full accent-primary-400" style={{height:'4px'}} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs" style={{color:'var(--text-2)'}}>Temperature</label>
+                                            <span className="font-mono text-xs" style={{color:'var(--accent-1)'}}>{(series.temperature || 0.8).toFixed(1)}</span>
+                                        </div>
+                                        <input type="range" min="0.1" max="1.5" step="0.1" value={series.temperature || 0.8}
+                                            onChange={e => onUpdateSeries(series.id, { temperature: parseFloat(e.target.value) })}
+                                            className="w-full accent-primary-400" style={{height:'4px'}} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Episode List */}
+                            <div className="space-y-2 max-h-72 overflow-y-auto">
+                                {series.episodes.length === 0 ? (
+                                    <p className="text-xs text-center py-4" style={{color:'var(--text-2)'}}>
+                                        No episodes yet. Click "Continue Story" to generate the first one.
+                                    </p>
+                                ) : series.episodes.map(ep => (
+                                    <div key={ep.episode_num} className="rounded-xl overflow-hidden"
+                                        style={{background:'var(--surface-2)', border:'1px solid var(--border)'}}>
+                                        {/* Episode header — click to expand/edit */}
+                                        <div className="flex items-center justify-between p-3 cursor-pointer"
+                                            onClick={() => startEdit(ep)}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-semibold" style={{color:'var(--text-1)'}}>
+                                                    Ep {ep.episode_num}
+                                                </span>
+                                                <span className="text-sm" style={{color:'var(--text-2)'}}>
+                                                    {ep.title || 'Untitled'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-mono" style={{color:'var(--text-2)'}}>{fmtDur(ep.duration_s || 0)}</span>
+                                                <span className="text-xs font-medium" style={{color:'var(--accent-1)'}}>
+                                                    {editingEp === ep.episode_num ? 'Close' : 'Edit'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Collapsed: show summary */}
+                                        {editingEp !== ep.episode_num && ep.summary && (
+                                            <div className="px-3 pb-2">
+                                                <p className="text-xs line-clamp-2" style={{color:'var(--text-2)'}}>{ep.summary}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Audio player — always below content */}
+                                        {ep.audio_path && (
+                                            <div className="px-3 pb-3">
+                                                <audio controls preload="none" className="w-full" style={{height:'36px', borderRadius:'8px'}}
+                                                    src={`${API_URL}/studio/series/${series.id}/episodes/${ep.episode_num}/download`} />
+                                            </div>
+                                        )}
+
+                                        {/* Expanded: script editor */}
+                                        {editingEp === ep.episode_num && (
+                                            <div className="px-3 pb-3 space-y-2" style={{borderTop:'1px solid var(--border)'}}>
+                                                <textarea
+                                                    value={editScript}
+                                                    onChange={e => setEditScript(e.target.value)}
+                                                    className="input-area w-full font-mono"
+                                                    style={{minHeight:'250px', fontSize:'0.78rem', lineHeight:'1.6', marginTop:'0.5rem'}}
+                                                    placeholder="[Character] Dialogue text..."
+                                                />
+                                                <div className="flex gap-2 items-center">
+                                                    <button className="btn-primary text-sm flex-1"
+                                                        onClick={() => handleReproduce(ep)}
+                                                        disabled={reproducing === ep.episode_num}>
+                                                        {reproducing === ep.episode_num ? 'Re-producing...' : 'Re-produce Audio'}
+                                                    </button>
+                                                    <span className="text-xs" style={{color:'var(--text-2)'}}>
+                                                        Format: [Character] text
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Continue hint */}
+                            <input placeholder="Optional hint for next episode... e.g. 'Lan discovers the secret'"
+                                value={continueHint}
+                                onChange={e => setContinueHint(e.target.value)}
+                                className="input-area w-full" style={{minHeight:'36px',height:'36px',fontSize:'0.8rem'}} />
+
+                            {/* Action buttons */}
+                            <div className="flex gap-2 flex-wrap">
+                                <button className="btn-primary flex-1" onClick={onContinue}
+                                    disabled={continuing}>
+                                    {continuing ? 'Generating...' : 'Continue Story'}
+                                </button>
+                                <button className="btn-secondary flex-1" onClick={onMerge}
+                                    disabled={merging || series.episodes.length < 2}>
+                                    {merging ? 'Merging...' : 'Merge All'}
+                                </button>
+                                <button className="btn-secondary" onClick={onExport}
+                                    style={{flex:'none', padding:'0.5rem 0.75rem'}}
+                                    title="Export series backup">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                </button>
+                                <button className="btn-stop" onClick={onDelete}
+                                    style={{width:'auto', flex:'none', padding:'0.5rem 0.75rem'}}>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const SeriesSection = ({ lastScript, lastVoiceMap, studioVoices }) => {
+            const [seriesList, setSeriesList] = useState([]);
+            const [expandedId, setExpandedId] = useState(null);
+            const [creating, setCreating] = useState(false);
+            const [continuing, setContinuing] = useState(null);
+            const [merging, setMerging] = useState(null);
+            const [newTitle, setNewTitle] = useState('');
+            const [newMode, setNewMode] = useState('story');
+            const [hints, setHints] = useState({});  // {seriesId: hint}
+            const importRef = useRef(null);
+
+            const loadSeries = () => fetch(`${API_URL}/studio/series`).then(r => r.json())
+                .then(d => setSeriesList(d.series || [])).catch(() => {});
+
+            useEffect(() => { loadSeries(); }, []);
+
+            const createSeries = async () => {
+                if (!newTitle.trim()) return;
+                const body = { title: newTitle, mode: newMode };
+                if (lastScript) { body.script_data = lastScript; body.voice_map = lastVoiceMap || {}; }
+                const res = await fetch(`${API_URL}/studio/series`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) { loadSeries(); setCreating(false); setNewTitle(''); }
+            };
+
+            const updateSeries = async (sid, updates) => {
+                const res = await fetch(`${API_URL}/studio/series/${sid}`, {
+                    method: 'PUT', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updates)
+                });
+                if (res.ok) loadSeries();
+            };
+
+            const continueSeries = async (sid) => {
+                setContinuing(sid);
+                try {
+                    const res = await fetch(`${API_URL}/studio/series/${sid}/continue`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ prompt: hints[sid] || '' })
+                    });
+                    if (res.ok) {
+                        loadSeries();
+                        setHints(h => ({ ...h, [sid]: '' }));
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(err.detail || 'Continue failed');
+                    }
+                } catch (e) { console.error(e); alert('Network error'); }
+                setContinuing(null);
+            };
+
+            const mergeSeries = async (sid) => {
+                setMerging(sid);
+                try {
+                    const res = await fetch(`${API_URL}/studio/series/${sid}/merge`, { method: 'POST' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        window.open(`${API_URL}${data.download_url}`, '_blank');
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(err.detail || 'Merge failed');
+                    }
+                } catch (e) { console.error(e); }
+                setMerging(null);
+            };
+
+            const exportSeries = (sid) => {
+                window.open(`${API_URL}/studio/series/${sid}/export`, '_blank');
+            };
+
+            const importSeries = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const res = await fetch(`${API_URL}/studio/series/import`, {
+                        method: 'POST', body: formData
+                    });
+                    if (res.ok) {
+                        loadSeries();
+                        alert('Series imported successfully! Audio files need to be re-produced.');
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(err.detail || 'Import failed');
+                    }
+                } catch (e) { console.error(e); }
+                e.target.value = '';
+            };
+
+            const deleteSeries = async (sid) => {
+                if (!confirm('Delete this series and all episodes?')) return;
+                await fetch(`${API_URL}/studio/series/${sid}`, { method: 'DELETE' });
+                loadSeries();
+            };
+
+            return (
+                <div className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold flex items-center gap-2" style={{color:'var(--text-1)'}}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Series / Audiobook
+                        </h3>
+                        <div className="flex gap-2">
+                            <input type="file" accept=".json" ref={importRef} onChange={importSeries}
+                                style={{display:'none'}} />
+                            <button className="btn-secondary text-sm px-3 py-2"
+                                onClick={() => importRef.current?.click()}
+                                title="Import series from backup">
+                                Import
+                            </button>
+                            <button className="btn-secondary text-sm px-4 py-2"
+                                onClick={() => setCreating(!creating)}>
+                                {creating ? 'Cancel' : '+ New Series'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {creating && (
+                        <div className="panel-card space-y-3">
+                            <input placeholder="Series title" value={newTitle}
+                                onChange={e => setNewTitle(e.target.value)}
+                                className="input-area" style={{minHeight:'40px',height:'40px'}} />
+                            <select value={newMode} onChange={e => setNewMode(e.target.value)}
+                                style={{
+                                    width:'100%', padding:'0.5rem 0.75rem', borderRadius:'0.75rem',
+                                    background:'var(--surface-2)', border:'1px solid var(--border)',
+                                    color:'var(--text-1)', fontSize:'0.875rem',
+                                }}>
+                                <option value="story">Story / Audiobook</option>
+                                <option value="dialogue">Dialogue</option>
+                            </select>
+                            {lastScript && (
+                                <p className="text-xs" style={{color:'var(--accent-1)'}}>
+                                    Will include current script as Episode 1
+                                </p>
+                            )}
+                            <button className="btn-primary w-full" onClick={createSeries}
+                                disabled={!newTitle.trim()}>
+                                Create Series
+                            </button>
+                        </div>
+                    )}
+
+                    {seriesList.length === 0 ? (
+                        <div className="panel-card text-center py-8">
+                            <p style={{color:'var(--text-2)'}}>No series yet. Create one to start multi-episode production.</p>
+                        </div>
+                    ) : seriesList.map(s => (
+                        <SeriesCard key={s.id}
+                            series={s}
+                            expanded={expandedId === s.id}
+                            onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
+                            onContinue={() => continueSeries(s.id)}
+                            onMerge={() => mergeSeries(s.id)}
+                            onDelete={() => deleteSeries(s.id)}
+                            onExport={() => exportSeries(s.id)}
+                            onUpdateSeries={updateSeries}
+                            continuing={continuing === s.id}
+                            merging={merging === s.id}
+                            studioVoices={studioVoices || []}
+                            continueHint={hints[s.id] || ''}
+                            setContinueHint={(v) => setHints(h => ({ ...h, [s.id]: v }))}
+                        />
+                    ))}
+                </div>
+            );
+        };
+
+
+        // ==========================================
+        // SINGLE VOICE TAB (existing TTS UI)
+        // ==========================================
+        const SingleVoiceTab = () => {
+            const [text, setText] = useState('');
+            const [status, setStatus] = useState(StreamStatus.IDLE);
+            const [metrics, setMetrics] = useState({ latencyMs: null, startTime: null });
+            const [voices, setVoices] = useState([]);
+            const [selectedVoice, setSelectedVoice] = useState('');
+            const [models, setModels] = useState([]);
+            const [currentModel, setCurrentModel] = useState(null);
+            const [isModelLoading, setIsModelLoading] = useState(false);
+            const [audioBlob, setAudioBlob] = useState(null);
+            const [analyserNode, setAnalyserNode] = useState(null);
+            const [inputMode, setInputMode] = useState('text');
+            const [urlInput, setUrlInput] = useState('');
+            const [isExtracting, setIsExtracting] = useState(false);
+            const [extractionMeta, setExtractionMeta] = useState(null);
+
+            const ctxRef = useRef(null);
+            const isPlayingRef = useRef(false);
+            const globalAnalyserRef = useRef(null);
+            const abortControllerRef = useRef(null);
+            const recordedChunksRef = useRef([]);
+
+            const fetchVoices = async (currentSelectedVoice) => {
+                try {
+                    const res = await fetch(`${API_URL}/voices`);
+                    const data = await res.json();
+                    setVoices(data);
+                    if (data.length > 0 && !data.find(v => v.id === currentSelectedVoice)) {
+                        setSelectedVoice(data[0].id);
+                    }
+                } catch (e) { console.warn("Failed to load voices", e); }
+            };
+
+            useEffect(() => {
+                fetch(`${API_URL}/models`).then(r => r.json()).then(data => {
+                    setModels(data);
+                    const active = data.find(m => m.active);
+                    if (active) setCurrentModel(active.key);
+                }).catch(() => {});
+                fetchVoices(selectedVoice);
+            }, []);
+
+            const handleModelChange = async (key) => {
+                if (key === currentModel) return;
+                setIsModelLoading(true);
+                try {
+                    const res = await fetch(`${API_URL}/set_model`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model_key: key })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'ok') { setCurrentModel(key); await fetchVoices(selectedVoice); }
+                    else alert('Error switching model: ' + data.message);
+                } catch (e) { alert('Network error switching model'); }
+                finally { setIsModelLoading(false); }
+            };
+
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+
+            const finalizeRecording = () => {
+                if (recordedChunksRef.current.length === 0) return;
+                let totalLength = 0;
+                for (const chunk of recordedChunksRef.current) totalLength += chunk.length;
+                const buffer = new ArrayBuffer(44 + totalLength);
+                const view = new DataView(buffer);
+                writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + totalLength, true);
+                writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+                view.setUint32(24, SAMPLE_RATE, true); view.setUint32(28, SAMPLE_RATE * 2, true);
+                view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+                writeString(view, 36, 'data'); view.setUint32(40, totalLength, true);
+                let offset = 44;
+                const bytes = new Uint8Array(buffer);
+                for (const chunk of recordedChunksRef.current) { bytes.set(chunk, offset); offset += chunk.length; }
+                setAudioBlob(new Blob([buffer], { type: 'audio/wav' }));
+            };
+
+            const handleGenerate = async () => {
+                if (!text.trim()) return;
+                handleStop();
+                setStatus(StreamStatus.CONNECTING);
+                const sessionStartTime = Date.now();
+                setMetrics({ startTime: sessionStartTime, latencyMs: null });
+                setAudioBlob(null); recordedChunksRef.current = [];
+                isPlayingRef.current = true;
+                abortControllerRef.current = new AbortController();
+                const signal = abortControllerRef.current.signal;
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContextClass({ sampleRate: SAMPLE_RATE });
+                ctxRef.current = ctx;
+                const analyser = ctx.createAnalyser(); analyser.fftSize = 256;
+                globalAnalyserRef.current = analyser; setAnalyserNode(analyser);
+                analyser.connect(ctx.destination);
+
+                try {
+                    let response;
+                    if (text.length > 2000) {
+                        response = await fetch(`${API_URL}/stream`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text, voice_id: selectedVoice || undefined }), signal
+                        });
+                    } else {
+                        const encodedText = encodeURIComponent(text);
+                        const voiceParam = selectedVoice ? `&voice_id=${selectedVoice}` : '';
+                        response = await fetch(`${API_URL}/stream?text=${encodedText}${voiceParam}`, { signal });
+                    }
+                    if (!response.body) return;
+                    const reader = response.body.getReader();
+                    let nextTime = ctx.currentTime + 0.1;
+                    let headerSkipped = false, firstChunkPlayed = false;
+
+                    const processStream = async () => {
+                        try {
+                            while (isPlayingRef.current) {
+                                const { done, value } = await reader.read();
+                                if (done || !isPlayingRef.current || !ctxRef.current) break;
+                                let audioData = value;
+                                let pcmData = audioData;
+                                if (!headerSkipped) {
+                                    if (audioData.length > 44) { audioData = audioData.slice(44); pcmData = audioData; headerSkipped = true; }
+                                    else continue;
+                                }
+                                recordedChunksRef.current.push(pcmData);
+                                const int16 = new Int16Array(audioData.buffer, audioData.byteOffset, audioData.byteLength / 2);
+                                const float32 = new Float32Array(int16.length);
+                                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768.0;
+                                const buf = ctx.createBuffer(1, float32.length, SAMPLE_RATE);
+                                buf.getChannelData(0).set(float32);
+                                const source = ctx.createBufferSource(); source.buffer = buf;
+                                source.connect(analyser);
+                                if (nextTime < ctx.currentTime) nextTime = ctx.currentTime;
+                                source.start(nextTime); nextTime += buf.duration;
+                                if (!firstChunkPlayed) {
+                                    setMetrics(prev => ({ ...prev, latencyMs: Date.now() - sessionStartTime }));
+                                    setStatus(StreamStatus.PLAYING); firstChunkPlayed = true;
+                                }
+                            }
+                        } catch (err) { if (err.name !== 'AbortError') throw err; }
+                        if (isPlayingRef.current) {
+                            const remaining = nextTime - ctx.currentTime;
+                            if (remaining > 0) await new Promise(r => setTimeout(r, remaining * 1000));
+                            if (isPlayingRef.current) {
+                                setStatus(StreamStatus.COMPLETED); finalizeRecording();
+                                setTimeout(() => setStatus(StreamStatus.IDLE), 2000);
+                            }
+                        }
+                    };
+                    await processStream();
+                } catch (e) {
+                    if (e.name !== 'AbortError') { console.error('Stream Error', e); setStatus(StreamStatus.ERROR); }
+                }
+            };
+
+            const handleStop = () => {
+                isPlayingRef.current = false;
+                if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
+                if (ctxRef.current) { ctxRef.current.close(); ctxRef.current = null; }
+                globalAnalyserRef.current = null; setAnalyserNode(null);
+                setStatus(StreamStatus.IDLE);
+            };
+
+            const handleDownload = () => {
+                if (!audioBlob) return;
+                const url = URL.createObjectURL(audioBlob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `vieneu_tts_${Date.now()}.wav`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleExtractUrl = async () => {
+                if (!urlInput.trim()) return;
+                setIsExtracting(true); setExtractionMeta(null);
+                try {
+                    const res = await fetch(`${API_URL}/extract_url`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urlInput.trim(), max_chars: 5000 })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'ok') {
+                        setText(data.text);
+                        setExtractionMeta({ title: data.title, charCount: data.char_count, truncated: data.truncated });
+                        setInputMode('text');
+                    } else alert('Extraction failed: ' + data.message);
+                } catch (e) { alert('Network error extracting URL'); }
+                finally { setIsExtracting(false); }
+            };
+
+            const charCount = text.length;
+            const segmentEstimate = Math.max(1, Math.ceil(charCount / SEGMENT_CHAR_SIZE));
+            const statusLabel = status === StreamStatus.IDLE ? 'READY' : status === StreamStatus.CONNECTING ? 'BUFFERING'
+                : status === StreamStatus.PLAYING ? 'STREAMING' : status === StreamStatus.COMPLETED ? 'COMPLETED' : 'ERROR';
+            const statusClass = status === StreamStatus.ERROR ? 'status-error' : status === StreamStatus.PLAYING ? 'status-playing'
+                : status === StreamStatus.CONNECTING ? 'status-connecting' : status === StreamStatus.COMPLETED ? 'status-completed' : '';
+
+            return (
+                <div className="space-y-4">
+                    {isModelLoading && (
+                        <div className="fixed inset-0 bg-slate-900/80 z-50 flex flex-col items-center justify-center space-y-3 backdrop-blur-sm">
+                            <Spinner className="h-10 w-10 text-primary-400" />
+                            <span className="text-primary-400 font-semibold animate-pulse">Switching Model...</span>
+                        </div>
+                    )}
+                    <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => setInputMode('text')}
+                                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${inputMode === 'text' ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'text-muted hover:text-main'}`}>
+                                        Text
+                                    </button>
+                                    <button onClick={() => setInputMode('url')}
+                                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${inputMode === 'url' ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'text-muted hover:text-main'}`}>
+                                        URL
+                                    </button>
+                                </div>
+                                <span className="text-xs text-muted">{charCount} chars</span>
+                            </div>
+                            {inputMode === 'url' && (
+                                <div className="space-y-3">
+                                    <div className="input-frame">
+                                        <input type="url" value={urlInput} onChange={(e) => setUrlInput(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleExtractUrl(); }}
+                                            placeholder="https://example.com/article..."
+                                            className="input-area" style={{ minHeight: 'auto', height: '48px', resize: 'none' }}
+                                            disabled={isExtracting} />
+                                    </div>
+                                    <button onClick={handleExtractUrl} disabled={isExtracting || !urlInput.trim()} className="btn-primary">
+                                        {isExtracting ? 'Extracting...' : 'Extract Text'}
+                                    </button>
+                                </div>
+                            )}
+                            {inputMode === 'text' && (
+                                <div className="space-y-2">
+                                    {extractionMeta && (
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            {extractionMeta.title && <span className="chip">{extractionMeta.title.length > 50 ? extractionMeta.title.slice(0, 50) + '...' : extractionMeta.title}</span>}
+                                            <span className="chip">{extractionMeta.charCount} chars</span>
+                                            {extractionMeta.truncated && <span className="chip chip-warn">Truncated</span>}
+                                        </div>
+                                    )}
+                                    <div className="input-frame">
+                                        <textarea value={text} onChange={(e) => setText(e.target.value)}
+                                            placeholder="Enter text to synthesize..." className="input-area" spellCheck="false" />
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-muted">
+                                <span>{inputMode === 'url' ? 'Paste an article URL to extract text for TTS.' : 'Tip: punctuation helps natural pauses.'}</span>
+                                <span className="font-mono">~{segmentEstimate} segments</span>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="panel-card space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="label-text">Model</label>
+                                    <span className="chip chip-warn">CPU Demo</span>
+                                </div>
+                                <select className="select-control" value={currentModel || 'q4'}
+                                    onChange={(e) => handleModelChange(e.target.value)}
+                                    disabled={status !== StreamStatus.IDLE && status !== StreamStatus.COMPLETED}>
+                                    {models.map(m => <option key={m.key} value={m.key}>{m.name}</option>)}
+                                </select>
+                                <p className="text-xs text-muted">Streaming demo optimized for CPU GGUF models.</p>
+                            </div>
+                            <div className="panel-card space-y-3">
+                                <label className="label-text">Voice</label>
+                                <select className={`select-control ${voices.length > 0 && voices[0].id.startsWith('error') ? 'border-red-500/50 text-red-300' : ''}`}
+                                    value={selectedVoice} onChange={(e) => setSelectedVoice(e.target.value)}
+                                    disabled={(status !== StreamStatus.IDLE && status !== StreamStatus.COMPLETED) || (voices.length > 0 && voices[0].id.startsWith('error'))}>
+                                    {voices.length === 0 && <option>Loading voices...</option>}
+                                    {voices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                                </select>
+                            </div>
+                            <Visualizer isPlaying={status === StreamStatus.PLAYING} externalContext={ctxRef.current} externalSource={analyserNode} />
+                            <div className="panel-card space-y-4">
+                                {status === StreamStatus.CONNECTING || status === StreamStatus.PLAYING ? (
+                                    <button onClick={handleStop} className="btn-stop">Stop Stream</button>
+                                ) : (
+                                    <button onClick={handleGenerate}
+                                        disabled={status !== StreamStatus.IDLE && status !== StreamStatus.COMPLETED}
+                                        className="btn-primary">
+                                        {status === StreamStatus.CONNECTING ? 'Connecting...' : 'Generate Stream'}
+                                    </button>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <div className={`status-chip ${statusClass}`}>
+                                        <span className="status-dot"></span>
+                                        <span className="font-mono">{statusLabel}</span>
+                                    </div>
+                                    {metrics.latencyMs && (
+                                        <span className="text-[11px] font-mono text-muted">
+                                            Head Latency: <span className="text-emerald-300">{metrics.latencyMs}ms</span>
+                                        </span>
+                                    )}
+                                </div>
+                                {audioBlob && status !== StreamStatus.PLAYING && status !== StreamStatus.CONNECTING && (
+                                    <button onClick={handleDownload} className="btn-secondary">Download WAV</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // SETTINGS TAB
+        // ==========================================
+        const SettingsTab = ({ settings, setSettings }) => {
+            const [cloneName, setCloneName] = useState('');
+            const [cloneText, setCloneText] = useState('');
+            const [cloneFile, setCloneFile] = useState(null);
+            const [cloning, setCloning] = useState(false);
+            const [cloneMsg, setCloneMsg] = useState(null);
+            const [customVoices, setCustomVoices] = useState([]);
+
+            const updateSetting = (key, value) => {
+                setSettings(prev => {
+                    const next = { ...prev, [key]: value };
+                    localStorage.setItem('studio-settings', JSON.stringify(next));
+                    return next;
+                });
+            };
+
+            // Load custom voices
+            useEffect(() => {
+                fetch(`${API_URL}/studio/clone-voice`).then(r => r.json())
+                    .then(d => { if (d.custom_voices) setCustomVoices(d.custom_voices); })
+                    .catch(() => {});
+            }, []);
+
+            const handleClone = async () => {
+                if (!cloneFile || !cloneName.trim()) return;
+                setCloning(true); setCloneMsg(null);
+                const formData = new FormData();
+                formData.append('file', cloneFile);
+                formData.append('name', cloneName.trim());
+                formData.append('text', cloneText);
+                try {
+                    const res = await fetch(`${API_URL}/studio/clone-voice`, { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setCloneMsg({ type: 'ok', text: data.message });
+                        setCloneName(''); setCloneText(''); setCloneFile(null);
+                        // Refresh list
+                        const lr = await fetch(`${API_URL}/studio/clone-voice`);
+                        const ld = await lr.json();
+                        if (ld.custom_voices) setCustomVoices(ld.custom_voices);
+                    } else {
+                        setCloneMsg({ type: 'err', text: data.detail || 'Failed' });
+                    }
+                } catch (e) { setCloneMsg({ type: 'err', text: e.message }); }
+                finally { setCloning(false); }
+            };
+
+            const handleDeleteVoice = async (id) => {
+                await fetch(`${API_URL}/studio/clone-voice/${id}`, { method: 'DELETE' });
+                setCustomVoices(prev => prev.filter(v => v.id !== id));
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Voice Generation Quality */}
+                        <div className="panel-card space-y-5">
+                            <label className="label-text">Voice Quality</label>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Temperature</label>
+                                    <span className="font-mono text-xs text-primary-400">{(settings.temperature || 0.8).toFixed(1)}</span>
+                                </div>
+                                <input type="range" min="0.1" max="1.5" step="0.1" value={settings.temperature || 0.8}
+                                    onChange={(e) => updateSetting('temperature', parseFloat(e.target.value))}
+                                    className="w-full accent-primary-400" />
+                                <p className="text-xs text-muted">Lower = stable, consistent. Higher = expressive, varied.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Top-K</label>
+                                    <span className="font-mono text-xs text-primary-400">{settings.topK || 50}</span>
+                                </div>
+                                <input type="range" min="10" max="100" step="5" value={settings.topK || 50}
+                                    onChange={(e) => updateSetting('topK', parseInt(e.target.value))}
+                                    className="w-full accent-primary-400" />
+                                <p className="text-xs text-muted">Controls token diversity. Lower = more focused pronunciation.</p>
+                            </div>
+                        </div>
+
+                        {/* LLM Config */}
+                        <div className="panel-card space-y-5">
+                            <label className="label-text">LLM Configuration</label>
+                            <div className="space-y-3">
+                                <label className="text-sm text-muted">Provider</label>
+                                <div className="flex gap-3">
+                                    {['claude', 'openai'].map(p => (
+                                        <button key={p} onClick={() => updateSetting('llmProvider', p)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${settings.llmProvider === p
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'text-muted border border-transparent hover:text-main hover:border-[var(--border)]'}`}>
+                                            {p === 'claude' ? 'Claude' : 'OpenAI'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm text-muted">Model Name</label>
+                                <input type="text" value={settings.llmModel}
+                                    onChange={(e) => updateSetting('llmModel', e.target.value)}
+                                    className="select-control" placeholder="claude-sonnet-4-20250514" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm text-muted">Max Characters per Script</label>
+                                <div className="flex items-center gap-3">
+                                    {[2, 3, 4].map(n => (
+                                        <button key={n} onClick={() => updateSetting('maxCharacters', n)}
+                                            className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${settings.maxCharacters === n
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'text-muted border border-[var(--border)] hover:text-main'}`}>
+                                            {n}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Audio Output */}
+                        <div className="panel-card space-y-5">
+                            <label className="label-text">Audio Output</label>
+                            <div className="space-y-3">
+                                <label className="text-sm text-muted">Format</label>
+                                <div className="flex gap-3">
+                                    {['wav', 'mp3'].map(f => (
+                                        <button key={f} onClick={() => updateSetting('outputFormat', f)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-semibold uppercase transition-all ${settings.outputFormat === f
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'text-muted border border-transparent hover:text-main hover:border-[var(--border)]'}`}>
+                                            {f}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-muted">Normalize Audio</label>
+                                <button onClick={() => updateSetting('normalize', !settings.normalize)}
+                                    className={`w-12 h-6 rounded-full transition-all ${settings.normalize ? 'bg-primary-500' : 'bg-slate-700'}`}>
+                                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${settings.normalize ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Silence Gap</label>
+                                    <span className="font-mono text-xs text-primary-400">{(settings.silenceGap || 0.3).toFixed(1)}s</span>
+                                </div>
+                                <input type="range" min="0" max="2" step="0.1" value={settings.silenceGap || 0.3}
+                                    onChange={(e) => updateSetting('silenceGap', parseFloat(e.target.value))}
+                                    className="w-full accent-primary-400" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Crossfade</label>
+                                    <span className="font-mono text-xs text-primary-400">{(settings.crossfade || 0).toFixed(1)}s</span>
+                                </div>
+                                <input type="range" min="0" max="1" step="0.05" value={settings.crossfade || 0}
+                                    onChange={(e) => updateSetting('crossfade', parseFloat(e.target.value))}
+                                    className="w-full accent-primary-400" />
+                            </div>
+                            <div className={`space-y-2 ${settings.targetDuration ? 'opacity-50' : ''}`}>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Speed</label>
+                                    <span className="font-mono text-xs text-primary-400">{(settings.speed || 1.0).toFixed(1)}x</span>
+                                </div>
+                                <input type="range" min="0.5" max="2.0" step="0.1" value={settings.speed || 1.0}
+                                    onChange={(e) => updateSetting('speed', parseFloat(e.target.value))}
+                                    disabled={!!settings.targetDuration}
+                                    className="w-full accent-primary-400" />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm text-muted">Target Duration</label>
+                                    <span className="font-mono text-xs text-primary-400">
+                                        {settings.targetDuration ? `${settings.targetDuration}s` : 'Auto'}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input type="number" min="0.5" max="600" step="0.5"
+                                        value={settings.targetDuration || ''}
+                                        placeholder="Auto"
+                                        onChange={(e) => updateSetting('targetDuration',
+                                            e.target.value ? parseFloat(e.target.value) : null)}
+                                        className="flex-1 bg-surface-2 border border-border rounded px-2 py-1 text-sm" />
+                                    <button onClick={() => updateSetting('targetDuration', null)}
+                                        className="px-2 py-1 text-xs bg-surface-2 border border-border rounded hover:bg-surface-3 transition-colors">
+                                        Clear
+                                    </button>
+                                </div>
+                                <p className="text-xs text-muted">
+                                    Set desired output length in seconds. Overrides speed control when active.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Voice Cloning */}
+                        <div className="panel-card space-y-5">
+                            <label className="label-text">Voice Cloning</label>
+                            <p className="text-xs text-muted">Upload 3-5 second WAV recording + exact transcript to clone a voice.</p>
+                            <div className="space-y-3">
+                                <input type="text" value={cloneName} onChange={(e) => setCloneName(e.target.value)}
+                                    className="select-control" placeholder="Voice name (e.g. my_voice)" style={{ fontSize: '13px', padding: '10px 14px' }} />
+                                <input type="file" accept=".wav,.mp3,.flac,.ogg"
+                                    onChange={(e) => setCloneFile(e.target.files[0])}
+                                    className="select-control" style={{ fontSize: '13px', padding: '10px 14px' }} />
+                                <textarea value={cloneText} onChange={(e) => setCloneText(e.target.value)}
+                                    className="select-control" placeholder="Exact text spoken in the audio..."
+                                    style={{ fontSize: '13px', padding: '10px 14px', minHeight: '60px', resize: 'vertical' }} />
+                                <button onClick={handleClone} disabled={cloning || !cloneFile || !cloneName.trim()}
+                                    className="btn-primary" style={{ fontSize: '13px', padding: '10px' }}>
+                                    {cloning ? 'Cloning...' : 'Clone Voice'}
+                                </button>
+                                {cloneMsg && (
+                                    <p className={`text-xs ${cloneMsg.type === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{cloneMsg.text}</p>
+                                )}
+                            </div>
+                            {/* Custom voices list */}
+                            {customVoices.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-xs text-muted uppercase tracking-wider">Custom Voices</label>
+                                    {customVoices.map(v => (
+                                        <div key={v.id} className="flex items-center justify-between py-2 border-b border-[var(--border)]">
+                                            <span className="text-sm text-main">{v.id}</span>
+                                            <button onClick={() => handleDeleteVoice(v.id)}
+                                                className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // WORKFLOWS TAB — Drawflow node editor
+        // ==========================================
+        const WorkflowsTab = () => {
+            const [workflows, setWorkflows] = useState([]);
+            const [editingWf, setEditingWf] = useState(null); // workflow being edited
+            const [wfName, setWfName] = useState('');
+            const [wfMode, setWfMode] = useState('dialogue');
+            const [wfFormat, setWfFormat] = useState('wav');
+            const [wfNormalize, setWfNormalize] = useState(true);
+            const [wfSilence, setWfSilence] = useState(0.3);
+            const [wfCrossfade, setWfCrossfade] = useState(0.0);
+            const [showEditor, setShowEditor] = useState(false);
+            const [runs, setRuns] = useState([]);
+            const [testText, setTestText] = useState('');
+            const [testLoading, setTestLoading] = useState(false);
+            const [testResult, setTestResult] = useState(null);
+            const drawflowRef = useRef(null);
+            const editorRef = useRef(null);
+
+            // Load workflows
+            useEffect(() => {
+                fetch(`${API_URL}/studio/workflows`).then(r => r.json())
+                    .then(d => { if (d.workflows) setWorkflows(d.workflows); })
+                    .catch(() => {});
+            }, []);
+
+            // Init Drawflow when editor opens
+            useEffect(() => {
+                if (showEditor && drawflowRef.current && !editorRef.current) {
+                    const ed = new Drawflow(drawflowRef.current);
+                    ed.reroute = true;
+                    ed.start();
+
+                    // Add default pipeline nodes (use function to avoid Babel JSX parsing of HTML strings)
+                    const makeNode = (title, label, extra) => {
+                        const d = document.createElement('div');
+                        const tb = document.createElement('div'); tb.className = 'title-box'; tb.textContent = title;
+                        const bx = document.createElement('div'); bx.className = 'box';
+                        const lb = document.createElement('div'); lb.className = 'node-label'; lb.textContent = label;
+                        bx.appendChild(lb);
+                        if (extra) { const ex = document.createElement('div'); ex.className = 'node-config'; ex.textContent = extra; bx.appendChild(ex); }
+                        d.appendChild(tb); d.appendChild(bx);
+                        return d.innerHTML;
+                    };
+                    const inputHtml = makeNode('Text Input', 'User text or webhook payload');
+                    const scriptHtml = makeNode('Script Generator', 'LLM generates dialogue/story', 'Mode: ' + wfMode);
+                    const voiceHtml = makeNode('Voice Assigner', 'Auto-assign voices by gender');
+                    const ttsHtml = makeNode('TTS Producer', 'Synthesize & merge audio', 'Format: ' + wfFormat);
+                    const outputHtml = makeNode('Output', 'Audio file / webhook response');
+
+                    ed.addNode('text_input', 0, 1, 50, 120, 'text_input', {}, inputHtml);
+                    ed.addNode('script_gen', 1, 1, 320, 80, 'script_gen', {}, scriptHtml);
+                    ed.addNode('voice_assign', 1, 1, 590, 120, 'voice_assign', {}, voiceHtml);
+                    ed.addNode('tts_produce', 1, 1, 860, 80, 'tts_produce', {}, ttsHtml);
+                    ed.addNode('output', 1, 0, 1130, 120, 'output', {}, outputHtml);
+
+                    // Connect nodes
+                    ed.addConnection(1, 2, 'output_1', 'input_1');
+                    ed.addConnection(2, 3, 'output_1', 'input_1');
+                    ed.addConnection(3, 4, 'output_1', 'input_1');
+                    ed.addConnection(4, 5, 'output_1', 'input_1');
+
+                    // If editing, load saved editor data
+                    if (editingWf && editingWf.config.editor_data && Object.keys(editingWf.config.editor_data).length > 0) {
+                        try { ed.import(editingWf.config.editor_data); } catch (e) { console.warn('Failed to import editor data', e); }
+                    }
+
+                    editorRef.current = ed;
+                }
+                return () => {
+                    if (!showEditor) { editorRef.current = null; }
+                };
+            }, [showEditor]);
+
+            const handleSave = async () => {
+                if (!wfName.trim()) return;
+                const editorData = editorRef.current ? editorRef.current.export() : {};
+                const config = {
+                    name: wfName, mode: wfMode, output_format: wfFormat,
+                    normalize: wfNormalize, silence_gap: wfSilence, crossfade: wfCrossfade,
+                    editor_data: editorData, max_characters: 4, description: '',
+                    voice_overrides: {},
+                };
+
+                const isUpdate = editingWf && editingWf.id;
+                const url = isUpdate ? `${API_URL}/studio/workflows/${editingWf.id}` : `${API_URL}/studio/workflows`;
+                const method = isUpdate ? 'PUT' : 'POST';
+
+                try {
+                    const res = await fetch(url, {
+                        method, headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setShowEditor(false); editorRef.current = null;
+                        // Refresh list
+                        const listRes = await fetch(`${API_URL}/studio/workflows`);
+                        const listData = await listRes.json();
+                        if (listData.workflows) setWorkflows(listData.workflows);
+                        setEditingWf(null); setWfName('');
+                    }
+                } catch (e) { console.error('Save failed', e); }
+            };
+
+            const handleDelete = async (id) => {
+                await fetch(`${API_URL}/studio/workflows/${id}`, { method: 'DELETE' });
+                setWorkflows(prev => prev.filter(w => w.id !== id));
+            };
+
+            const handleEdit = (wf) => {
+                setEditingWf(wf);
+                setWfName(wf.config.name);
+                setWfMode(wf.config.mode);
+                setWfFormat(wf.config.output_format);
+                setWfNormalize(wf.config.normalize);
+                setWfSilence(wf.config.silence_gap);
+                setWfCrossfade(wf.config.crossfade);
+                editorRef.current = null;
+                setShowEditor(true);
+            };
+
+            const handleNew = () => {
+                setEditingWf(null);
+                setWfName(''); setWfMode('dialogue'); setWfFormat('wav');
+                setWfNormalize(true); setWfSilence(0.3); setWfCrossfade(0.0);
+                editorRef.current = null;
+                setShowEditor(true);
+            };
+
+            const handleTest = async (wf) => {
+                if (!testText.trim()) return;
+                setTestLoading(true); setTestResult(null);
+                try {
+                    const res = await fetch(`${API_URL}${wf.webhook_url}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: testText }),
+                    });
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        setTestResult({ url, format: wf.config.output_format });
+                    } else {
+                        const err = await res.json();
+                        setTestResult({ error: err.detail || 'Failed' });
+                    }
+                } catch (e) { setTestResult({ error: e.message }); }
+                finally { setTestLoading(false); }
+            };
+
+            const loadRuns = async (wfId) => {
+                const res = await fetch(`${API_URL}/studio/workflows/${wfId}/runs`);
+                const data = await res.json();
+                setRuns(data.runs || []);
+            };
+
+            if (showEditor) {
+                return (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => { setShowEditor(false); editorRef.current = null; }} className="btn-secondary" style={{ width: 'auto', padding: '8px 16px' }}>
+                                Back
+                            </button>
+                            <h3 className="text-lg font-semibold text-main">{editingWf ? 'Edit Workflow' : 'New Workflow'}</h3>
+                            <button onClick={handleSave} className="btn-primary" style={{ width: 'auto', padding: '8px 24px' }}>
+                                Save
+                            </button>
+                        </div>
+
+                        {/* Workflow Config */}
+                        <div className="grid gap-4 lg:grid-cols-3">
+                            <div className="panel-card space-y-3">
+                                <label className="label-text">Workflow Name</label>
+                                <input type="text" value={wfName} onChange={(e) => setWfName(e.target.value)}
+                                    className="select-control" placeholder="My Workflow" />
+                            </div>
+                            <div className="panel-card space-y-3">
+                                <label className="label-text">Mode</label>
+                                <div className="flex gap-2">
+                                    {['dialogue', 'story'].map(m => (
+                                        <button key={m} onClick={() => setWfMode(m)}
+                                            className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold uppercase transition-all ${wfMode === m
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'text-muted border border-[var(--border)]'}`}>
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="panel-card space-y-3">
+                                <label className="label-text">Output</label>
+                                <div className="flex gap-2">
+                                    {['wav', 'mp3'].map(f => (
+                                        <button key={f} onClick={() => setWfFormat(f)}
+                                            className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold uppercase transition-all ${wfFormat === f
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'text-muted border border-[var(--border)]'}`}>
+                                            {f}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Drawflow Editor */}
+                        <div className="panel-card" style={{ padding: '0', overflow: 'hidden' }}>
+                            <div ref={drawflowRef} style={{ width: '100%', height: '400px' }}></div>
+                        </div>
+                        <p className="text-xs text-muted text-center">Drag nodes to rearrange. Click connections to delete. Pipeline flows left to right.</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold text-main">Workflows</h3>
+                            <p className="text-xs text-muted">Create pipelines with webhook URLs. Trigger via curl, cron, or any HTTP client.</p>
+                        </div>
+                        <button onClick={handleNew} className="btn-primary" style={{ width: 'auto', padding: '10px 20px' }}>
+                            + New Workflow
+                        </button>
+                    </div>
+
+                    {/* Workflow List */}
+                    {workflows.length === 0 ? (
+                        <div className="panel-card text-center py-12">
+                            <p className="text-muted">No workflows yet. Create one to get a webhook URL.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {workflows.map(wf => (
+                                <div key={wf.id} className="wf-card space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-semibold text-main">{wf.config.name}</span>
+                                            <span className="chip">{wf.config.mode}</span>
+                                            <span className="chip">{wf.config.output_format}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted">{wf.run_count} runs</span>
+                                            <button onClick={() => handleEdit(wf)} className="px-3 py-1 text-xs font-semibold text-primary-400 border border-primary-500/30 rounded-lg hover:bg-primary-500/10">
+                                                Edit
+                                            </button>
+                                            <button onClick={() => handleDelete(wf.id)} className="px-3 py-1 text-xs font-semibold text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Webhook URL */}
+                                    <div>
+                                        <label className="label-text">Webhook URL</label>
+                                        <div className="wf-webhook mt-1">
+                                            <span className="text-muted">POST</span>{' '}
+                                            <span className="text-primary-400">{window.location.origin}{wf.webhook_url}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Curl example */}
+                                    <details className="text-xs">
+                                        <summary className="text-muted cursor-pointer hover:text-main">curl example</summary>
+                                        <pre className="wf-webhook mt-2 text-xs overflow-x-auto" style={{ whiteSpace: 'pre-wrap' }}>
+{`curl -X POST ${window.location.origin}${wf.webhook_url} \\
+  -H "Content-Type: application/json" \\
+  -d '{"text": "your text here"}' \\
+  --output output.${wf.config.output_format}`}
+                                        </pre>
+                                    </details>
+
+                                    {/* Quick Test */}
+                                    <details className="text-xs">
+                                        <summary className="text-muted cursor-pointer hover:text-main">Quick test</summary>
+                                        <div className="mt-2 space-y-2">
+                                            <textarea value={testText} onChange={(e) => setTestText(e.target.value)}
+                                                placeholder="Enter test text..."
+                                                className="select-control" style={{ minHeight: '60px', resize: 'vertical', fontSize: '12px' }} />
+                                            <button onClick={() => handleTest(wf)} disabled={testLoading || !testText.trim()}
+                                                className="btn-primary" style={{ fontSize: '12px', padding: '8px' }}>
+                                                {testLoading ? 'Running...' : 'Run Workflow'}
+                                            </button>
+                                            {testResult && testResult.url && (
+                                                <div className="flex gap-2 items-center">
+                                                    <audio controls src={testResult.url} style={{ height: '32px', flex: 1 }} />
+                                                    <a href={testResult.url} download className="px-3 py-1 text-xs font-semibold text-primary-400 border border-primary-500/30 rounded-lg">
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            )}
+                                            {testResult && testResult.error && (
+                                                <p className="text-red-400 text-xs">{testResult.error}</p>
+                                            )}
+                                        </div>
+                                    </details>
+
+                                    {/* Run History */}
+                                    <details className="text-xs">
+                                        <summary className="text-muted cursor-pointer hover:text-main" onClick={() => loadRuns(wf.id)}>
+                                            Run history ({wf.run_count})
+                                        </summary>
+                                        <div className="mt-2 space-y-1">
+                                            {runs.filter(r => r.workflow_id === wf.id).map(r => (
+                                                <div key={r.run_id} className="flex items-center justify-between py-1 border-b border-[var(--border)]">
+                                                    <span className={r.status === 'success' ? 'text-green-400' : 'text-red-400'}>{r.status}</span>
+                                                    <span className="text-muted truncate max-w-[200px]">{r.input_text}</span>
+                                                    <span className="text-muted">{new Date(r.started_at * 1000).toLocaleTimeString()}</span>
+                                                    {r.output_url && <a href={r.output_url} className="text-primary-400">Download</a>}
+                                                </div>
+                                            ))}
+                                            {runs.filter(r => r.workflow_id === wf.id).length === 0 && (
+                                                <p className="text-muted py-2">No runs yet</p>
+                                            )}
+                                        </div>
+                                    </details>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // APP ENTRY
+        // ==========================================
+        const App = () => {
+            const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('studio-tab') || 'studio');
+            const [theme, setTheme] = useState(() => localStorage.getItem('vietvoice-theme') || 'dark');
+            const [studioVoices, setStudioVoices] = useState([]);
+            const SETTINGS_DEFAULTS = {
+                llmProvider: 'claude', llmModel: 'claude-sonnet-4-20250514',
+                maxCharacters: 4, outputFormat: 'wav', normalize: true,
+                silenceGap: 0.3, crossfade: 0.0, speed: 1.0,
+                temperature: 0.8, topK: 50, targetDuration: null,
+            };
+            const [settings, setSettings] = useState(() => {
+                try {
+                    const stored = localStorage.getItem('studio-settings');
+                    return stored ? { ...SETTINGS_DEFAULTS, ...JSON.parse(stored) } : SETTINGS_DEFAULTS;
+                } catch (e) { return SETTINGS_DEFAULTS; }
+            });
+
+            useEffect(() => {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('vietvoice-theme', theme);
+            }, [theme]);
+
+            useEffect(() => {
+                sessionStorage.setItem('studio-tab', activeTab);
+            }, [activeTab]);
+
+            // Load studio voices
+            useEffect(() => {
+                fetch(`${API_URL}/studio/voices`)
+                    .then(r => r.json())
+                    .then(data => { if (data.voices) setStudioVoices(data.voices); })
+                    .catch(() => {});
+            }, []);
+
+            return (
+                <div className="min-h-screen w-full app-shell">
+                    <div className="grid-overlay"></div>
+                    <div className="ambient-orb orb-1"></div>
+                    <div className="ambient-orb orb-2"></div>
+                    <div className="ambient-orb orb-3"></div>
+
+                    <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-12">
+                        {/* Header */}
+                        <div className="reveal space-y-4 text-center md:text-left mb-8">
+                            <div className="flex flex-col md:flex-row items-center md:items-end justify-center md:justify-between gap-6">
+                                <div className="flex items-center gap-4">
+                                    <img src="/logo.svg" alt="VietVoice" className="w-14 h-14 rounded-2xl shadow-lg shadow-black/40" />
+                                    <div>
+                                        <h1 className="title-text text-4xl md:text-5xl text-main">VietVoice Studio</h1>
+                                        <p className="text-sm text-muted max-w-md">
+                                            Multi-character voice production & streaming TTS
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-center md:justify-end gap-3">
+                                    <span className="chip">24 kHz</span>
+                                    <span className="chip">Multi-Voice</span>
+                                    <span className="chip">Studio</span>
+                                    <button
+                                        className={`theme-switch ${theme === 'light' ? 'is-light' : 'is-dark'}`}
+                                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                        title="Toggle theme" aria-pressed={theme === 'light'}>
+                                        <span className="icon icon-sun">{'\u2600\uFE0F'}</span>
+                                        <span className="icon icon-moon">{'\uD83C\uDF19'}</span>
+                                        <span className="thumb"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tab Bar */}
+                        <div className="reveal flex justify-center mb-8" style={{ animationDelay: '80ms' }}>
+                            <div className="tab-bar">
+                                {[
+                                    { id: 'studio', label: 'Studio' },
+                                    { id: 'workflows', label: 'Workflows' },
+                                    { id: 'single', label: 'Single Voice' },
+                                    { id: 'settings', label: 'Settings' },
+                                ].map(tab => (
+                                    <button key={tab.id}
+                                        className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                                        onClick={() => setActiveTab(tab.id)}>
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="surface-card reveal p-8 md:p-10 relative overflow-hidden" style={{ animationDelay: '120ms' }}>
+                            {activeTab === 'studio' && settings && (
+                                <StudioTab settings={settings} studioVoices={studioVoices} />
+                            )}
+                            {activeTab === 'workflows' && <WorkflowsTab />}
+                            {activeTab === 'single' && <SingleVoiceTab />}
+                            {activeTab === 'settings' && settings && (
+                                <SettingsTab settings={settings} setSettings={setSettings} />
+                            )}
+                        </div>
+
+                        <footer className="footer-note text-center mt-10">
+                            Powered by VietVoice & React
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        // Fix: Chrome extensions inject nodes into body/root, causing React removeChild errors.
+        // Create isolated container inside #root to prevent extension interference.
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+            // Remove any extension-injected nodes from root
+            while (rootElement.firstChild) {
+                rootElement.removeChild(rootElement.firstChild);
+            }
+            const container = document.createElement('div');
+            rootElement.appendChild(container);
+            const root = ReactDOM.createRoot(container);
+            root.render(<App />);
+        }
+    </script>
+</body>
+</html>

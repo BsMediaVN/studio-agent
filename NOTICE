@@ -1,0 +1,26 @@
+VietVoice Studio
+Copyright 2026 BsMediaVN
+
+This product includes software developed as part of the VieNeu-TTS project.
+
+================================================================================
+Third-party / vendored components
+================================================================================
+
+VieNeu-TTS (Vietnamese Text-to-Speech engine)
+  Source:   https://github.com/pnnbao97/VieNeu-TTS
+  Author:   Phạm Nguyễn Ngọc Bảo
+  License:  Apache License 2.0
+  Vendored: src/vieneu/, src/vieneu_utils/, and the bundled reference voice
+            samples under src/vieneu/assets/samples/
+
+  The TTS inference engine, the bundled preset voices, and the model weights
+  hosted on Hugging Face (pnnbao-ump/VieNeu-TTS*) are the work of the VieNeu-TTS
+  authors and are used here under the Apache License 2.0.
+
+SadTalker (face / lip-sync animation, used by the video pipeline)
+  Source:   https://github.com/OpenTalker/SadTalker
+  License:  Apache License 2.0
+
+NeuCodec / DistillNeuCodec (neural audio codec)
+  Source:   https://huggingface.co/neuphonic
