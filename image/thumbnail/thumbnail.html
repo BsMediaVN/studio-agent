@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#05080b; --bg1:#0a1016; --ink:#eef4f8; --mute:#9fb3bf;
+    --teal:#2dd4bf; --teal2:#34e0c4; --emerald:#10b981; --line:rgba(120,160,170,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1280px;height:640px;overflow:hidden}
+  body{
+    font-family:'Inter',-apple-system,system-ui,sans-serif;
+    background:var(--bg0); color:var(--ink); position:relative;
+  }
+  .banner{
+    position:relative;width:1280px;height:640px;overflow:hidden;
+    background:
+      radial-gradient(900px 520px at 88% -8%, rgba(45,212,191,.16), transparent 60%),
+      radial-gradient(720px 600px at 6% 112%, rgba(16,185,129,.12), transparent 58%),
+      linear-gradient(135deg,#0a1016 0%,#06090c 60%,#05080b 100%);
+  }
+  /* dotted texture */
+  .banner::before{
+    content:"";position:absolute;inset:0;
+    background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size:26px 26px;mask-image:linear-gradient(90deg,#000 0%,transparent 62%);
+    opacity:.6;
+  }
+  /* soft top hairline */
+  .banner::after{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(45,212,191,.5),transparent)}
+
+  /* ---------- left copy ---------- */
+  .left{position:absolute;left:64px;top:0;bottom:0;width:520px;display:flex;
+    flex-direction:column;justify-content:center;z-index:5}
+  .kicker{display:inline-flex;align-items:center;gap:9px;align-self:flex-start;
+    padding:7px 14px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(45,212,191,.06);font-size:12.5px;font-weight:700;letter-spacing:.16em;
+    color:var(--teal);text-transform:uppercase;margin-bottom:22px}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);
+    box-shadow:0 0 0 4px rgba(45,212,191,.18)}
+  h1{font-size:62px;font-weight:900;line-height:1.02;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#ffffff 30%,var(--teal2) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{margin-top:16px;font-size:19px;line-height:1.5;color:var(--mute);max-width:440px;font-weight:450}
+  .sub b{color:#d7e6ec;font-weight:650}
+  ul{list-style:none;margin:26px 0 0;display:flex;flex-direction:column;gap:13px}
+  li{display:flex;align-items:center;gap:13px;font-size:16.5px;font-weight:550;color:#dbe7ed}
+  li .ic{flex:0 0 auto;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+    background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.28)}
+  li .ic svg{width:14px;height:14px;stroke:var(--teal);fill:none;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round}
+  .badges{margin-top:30px;display:flex;flex-wrap:wrap;gap:9px}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+    padding:6px 11px;border-radius:8px;border:1px solid var(--line);
+    background:rgba(255,255,255,.03);color:#a7bcc4}
+
+  /* ---------- right: screenshot windows ---------- */
+  .stage{position:absolute;right:0;top:0;width:760px;height:640px;
+    perspective:1700px;z-index:3}
+  .win{position:absolute;border-radius:14px;overflow:hidden;
+    background:#0c141a;border:1px solid rgba(150,190,200,.16);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.8),0 0 0 1px rgba(0,0,0,.4);}
+  .win .bar{height:30px;display:flex;align-items:center;gap:7px;padding:0 13px;
+    background:linear-gradient(180deg,#121c23,#0d151b);border-bottom:1px solid rgba(150,190,200,.1)}
+  .win .bar i{width:10px;height:10px;border-radius:50%;display:block}
+  .win .bar i:nth-child(1){background:#ff5f57}
+  .win .bar i:nth-child(2){background:#febc2e}
+  .win .bar i:nth-child(3){background:#28c840}
+  .win .bar .t{margin-left:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6f8893}
+  .win img{display:block;width:100%;height:auto}
+
+  .win-studio{width:560px;top:54px;left:96px;
+    transform:rotateY(15deg) rotateX(5deg) rotate(-3deg);z-index:2;filter:brightness(.93)}
+  .win-video{width:560px;top:300px;left:182px;
+    transform:rotateY(13deg) rotateX(3deg) rotate(-2deg);z-index:4}
+
+  /* floating task tags */
+  .tag{position:absolute;z-index:6;display:flex;align-items:center;gap:8px;
+    padding:8px 13px;border-radius:10px;font-size:13px;font-weight:700;
+    background:rgba(7,12,16,.82);backdrop-filter:blur(8px);
+    border:1px solid rgba(45,212,191,.3);box-shadow:0 12px 30px -10px rgba(0,0,0,.7)}
+  .tag b{color:var(--teal);letter-spacing:.04em}
+  .tag span{color:#cddbe2;font-weight:550}
+  .tag .pip{width:8px;height:8px;border-radius:50%;background:var(--teal);
+    box-shadow:0 0 0 4px rgba(45,212,191,.2)}
+  .tag-studio{top:62px;left:612px}
+  .tag-video{top:300px;left:690px}
+
+  /* corner brand mark */
+  .mark{position:absolute;left:64px;bottom:34px;display:flex;align-items:center;gap:10px;
+    font-size:13px;color:#6f8893;font-weight:600;z-index:6}
+  .mark .logo{width:22px;height:22px;border-radius:6px;
+    background:linear-gradient(135deg,var(--teal),var(--emerald));
+    display:grid;place-items:center;color:#04110d;font-weight:900;font-size:13px}
+</style>
+</head>
+<body>
+  <div class="banner">
+    <div class="left">
+      <span class="kicker"><span class="dot"></span>Self-hosted · Vietnamese AI Studio</span>
+      <h1>VietVoice<br>Studio</h1>
+      <p class="sub">Turn one prompt into <b>Vietnamese voice</b> and a <b>talking-head video</b> — entirely self-hosted.</p>
+      <ul>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg></span>Multi-character TTS + LLM script generation</li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></span>Prompt → talking-head video with lip-sync</li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Runs locally · built on VieNeu-TTS</li>
+      </ul>
+      <div class="badges">
+        <span class="badge">FastAPI</span><span class="badge">Next.js</span>
+        <span class="badge">SadTalker</span><span class="badge">FFmpeg</span>
+        <span class="badge">Apache-2.0</span>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="win win-studio">
+        <div class="bar"><i></i><i></i><i></i><span class="t">/studio</span></div>
+        <img src="_shot-studio.png" alt="Studio — multi-character Vietnamese TTS production" />
+      </div>
+      <div class="win win-video">
+        <div class="bar"><i></i><i></i><i></i><span class="t">/video</span></div>
+        <img src="_shot-video.png" alt="Video Generator — talking-head lip-sync pipeline" />
+      </div>
+    </div>
+
+    <div class="tag tag-studio"><span class="pip"></span><b>STUDIO</b><span>— Multi-voice TTS</span></div>
+    <div class="tag tag-video"><span class="pip"></span><b>VIDEO</b><span>— Talking-head lip-sync</span></div>
+
+    <div class="mark"><span class="logo">V</span>github.com/BsMediaVN/studio-agent</div>
+  </div>
+</body>
+</html>
