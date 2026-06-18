@@ -35,6 +35,8 @@ class VideoGenerateRequest(BaseModel):
 
     prompt: str = Field(min_length=1, max_length=2000)
     voice_id: str
+    # "frames" (animated, default, no face image) | "face" (SadTalker realistic)
+    render_mode: Literal["frames", "face"] = "frames"
     target_duration_s: float = Field(default=30.0, ge=5, le=120)
     burn_subtitles: bool = True
     body_test_mode: bool = True  # True until Mixamo assets available
@@ -45,6 +47,7 @@ class VideoStatusResponse(BaseModel):
 
     face_engine_available: bool
     body_renderer_ready: bool
+    frames_renderer_ready: bool
     video_pipeline_enabled: bool
 
 
@@ -63,20 +66,25 @@ class VideoProducer:
 
     async def start_job(
         self,
-        face_image: UploadFile,
+        face_image: UploadFile | None,
         config: VideoGenerateRequest,
     ) -> str:
         """Validate image, create job, launch pipeline in background."""
         # Create job (JobManager generates the job_id)
         job_id = await self._jobs.create_job()
 
-        # Validate and save face image
-        face_path = await self._save_face_image(face_image, job_id)
+        # Face image only needed for realistic (face) mode.
+        face_path: Path | None = None
+        if config.render_mode == "face":
+            if face_image is None:
+                raise HTTPException(422, "face_image is required for realistic (face) mode")
+            face_path = await self._save_face_image(face_image, job_id)
 
         # Build pipeline config
         from apps.video.pipeline import PipelineConfig
 
         pipeline_config = PipelineConfig(
+            render_mode=config.render_mode,
             voice_id=config.voice_id,
             target_duration_s=config.target_duration_s,
             burn_subtitles=config.burn_subtitles,
@@ -242,16 +250,18 @@ def register_video_endpoints(studio_app: Any) -> None:
 
     @studio_app.post("/video/generate")
     async def generate_video(
-        face_image: UploadFile,
+        face_image: UploadFile | None = None,
         prompt: str = Form(..., min_length=1, max_length=2000),
         voice_id: str = Form(...),
+        render_mode: Literal["frames", "face"] = Form("frames"),
         target_duration_s: float = Form(30.0, ge=5, le=120),
         burn_subtitles: bool = Form(True),
         body_test_mode: bool = Form(True),
     ) -> dict[str, str]:
         """Start a video generation job.
 
-        Upload a face image + provide text prompt.
+        frames mode (default): text prompt → animated video (no face image).
+        face mode: upload a face image → realistic talking head.
         Returns job_id for progress tracking via WebSocket.
         """
         if video_producer is None:
@@ -279,6 +289,7 @@ def register_video_endpoints(studio_app: Any) -> None:
         config = VideoGenerateRequest(
             prompt=prompt,
             voice_id=voice_id,
+            render_mode=render_mode,
             target_duration_s=target_duration_s,
             burn_subtitles=burn_subtitles,
             body_test_mode=body_test_mode,
@@ -290,8 +301,8 @@ def register_video_endpoints(studio_app: Any) -> None:
     @studio_app.get("/video/download/{job_id}")
     async def download_video(job_id: str) -> FileResponse:
         """Download the generated video file."""
-        # Validate job_id format
-        if not re.match(r'^[a-zA-Z0-9]+$', job_id):
+        # Validate job_id format (match the pipeline's sanitizer)
+        if not re.match(r'^[a-zA-Z0-9_-]+$', job_id):
             raise HTTPException(400, "Invalid job_id format")
 
         if video_producer is None:
@@ -320,18 +331,20 @@ def register_video_endpoints(studio_app: Any) -> None:
     @studio_app.get("/video/status")
     async def video_status() -> dict[str, Any]:
         """Get video pipeline status."""
+        from apps.video.frames import FramesRenderer
+
         if video_producer is None:
             return VideoStatusResponse(
                 face_engine_available=False,
                 body_renderer_ready=False,
+                frames_renderer_ready=FramesRenderer.is_available(),
                 video_pipeline_enabled=False,
             ).model_dump()
-
-        from apps.video.face.animator import FaceAnimator
 
         return VideoStatusResponse(
             face_engine_available=video_producer._pipeline._face_anim.is_available,
             body_renderer_ready=True,
+            frames_renderer_ready=FramesRenderer.is_available(),
             video_pipeline_enabled=True,
         ).model_dump()
 

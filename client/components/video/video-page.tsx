@@ -30,8 +30,26 @@ const DURATION_PRESETS = [
   { label: '2m', value: 120 },
 ];
 
+type RenderMode = 'frames' | 'face';
+
+const PIPELINE_STAGES: Record<RenderMode, { label: string; range: string; icon: string }[]> = {
+  frames: [
+    { label: 'Script parsing', range: '0%', icon: 'M4 7h16M4 12h16M4 17h10' },
+    { label: 'Voice synthesis', range: '0-55%', icon: 'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z' },
+    { label: 'Composition', range: '60%', icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
+    { label: 'Frames render', range: '60-100%', icon: 'M10 8l6 4-6 4V8z' },
+  ],
+  face: [
+    { label: 'Voice synthesis', range: '0-30%', icon: 'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z' },
+    { label: 'Face animation', range: '30-55%', icon: 'M9 9h.01M15 9h.01M8 13a4 4 0 0 0 8 0' },
+    { label: 'Body animation', range: '55-80%', icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' },
+    { label: 'Video composition', range: '80-95%', icon: 'M3 3h7v7H3zM14 3h7v7h-7z' },
+  ],
+};
+
 export function VideoPage() {
   const [prompt, setPrompt] = useState('');
+  const [renderMode, setRenderMode] = useState<RenderMode>('frames');
   const [voiceId, setVoiceId] = useState('Binh');
   const [duration, setDuration] = useState(30);
   const [burnSubs, setBurnSubs] = useState(true);
@@ -70,7 +88,8 @@ export function VideoPage() {
   }, []);
 
   const startGeneration = useCallback(async () => {
-    if (!faceImage || !prompt.trim()) return;
+    if (!prompt.trim()) return;
+    if (renderMode === 'face' && !faceImage) return;
     setIsGenerating(true);
     setError(null);
     setVideoUrl(null);
@@ -78,9 +97,12 @@ export function VideoPage() {
 
     try {
       const formData = new FormData();
-      formData.append('face_image', faceImage);
+      if (renderMode === 'face' && faceImage) {
+        formData.append('face_image', faceImage);
+      }
       formData.append('prompt', prompt);
       formData.append('voice_id', voiceId);
+      formData.append('render_mode', renderMode);
       formData.append('target_duration_s', String(duration));
       formData.append('burn_subtitles', String(burnSubs));
       formData.append('body_test_mode', 'true');
@@ -131,9 +153,12 @@ export function VideoPage() {
       setError(err instanceof Error ? err.message : 'Failed to start video generation');
       setIsGenerating(false);
     }
-  }, [faceImage, prompt, voiceId, duration, burnSubs]);
+  }, [faceImage, prompt, renderMode, voiceId, duration, burnSubs]);
 
-  const canGenerate = faceImage && prompt.trim().length > 0 && !isGenerating;
+  const canGenerate =
+    prompt.trim().length > 0 &&
+    (renderMode === 'frames' || !!faceImage) &&
+    !isGenerating;
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px' }}>
@@ -143,14 +168,57 @@ export function VideoPage() {
           Video Generator
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
-          Upload a face image + write a prompt to generate an animated character video with lip-sync.
+          {renderMode === 'frames'
+            ? 'Write a prompt (or "Name: line" dialogue) to render an animated character video — no face image needed.'
+            : 'Upload a face image + write a prompt to generate a realistic talking-head video with lip-sync.'}
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
         {/* Left Column — Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Face Image Upload */}
+          {/* Render mode toggle */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: 6,
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 6,
+            }}
+          >
+            {([
+              { mode: 'frames' as RenderMode, title: 'Animated', sub: 'Motion graphic · no face' },
+              { mode: 'face' as RenderMode, title: 'Realistic', sub: 'SadTalker face' },
+            ]).map((opt) => {
+              const active = renderMode === opt.mode;
+              return (
+                <button
+                  key={opt.mode}
+                  onClick={() => setRenderMode(opt.mode)}
+                  disabled={isGenerating}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: `1px solid ${active ? 'var(--accent-1)' : 'transparent'}`,
+                    background: active ? 'rgba(45,212,191,0.15)' : 'transparent',
+                    color: active ? 'var(--accent-1)' : 'var(--text-2)',
+                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{opt.title}</div>
+                  <div style={{ fontSize: 11, opacity: 0.8 }}>{opt.sub}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Face Image Upload — realistic mode only */}
+          {renderMode === 'face' ? (
           <div
             className="surface-card"
             style={{
@@ -208,6 +276,26 @@ export function VideoPage() {
               style={{ display: 'none' }}
             />
           </div>
+          ) : (
+          <div
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px dashed var(--border)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontSize: 12,
+              color: 'var(--text-2)',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-1)" strokeWidth="2">
+              <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+            </svg>
+            Animated mode renders an on-brand scene with captions — no face image needed.
+          </div>
+          )}
 
           {/* Prompt */}
           <div
@@ -477,12 +565,7 @@ export function VideoPage() {
             <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>
               Pipeline Stages
             </p>
-            {[
-              { label: 'Voice synthesis', range: '0-30%', icon: 'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z' },
-              { label: 'Face animation', range: '30-55%', icon: 'M9 9h.01M15 9h.01M8 13a4 4 0 0 0 8 0' },
-              { label: 'Body animation', range: '55-80%', icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' },
-              { label: 'Video composition', range: '80-95%', icon: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z' },
-            ].map((stage, i) => {
+            {PIPELINE_STAGES[renderMode].map((stage, i) => {
               const active = jobStatus && jobStatus.progress >= parseInt(stage.range);
               return (
                 <div

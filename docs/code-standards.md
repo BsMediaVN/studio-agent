@@ -448,7 +448,134 @@ async def trigger_workflow(workflow_id: str, payload: dict):
 
 ---
 
-## 12. Security & Validation
+## 12. Video Rendering Patterns
+
+### Frames Mode (HyperFrames)
+
+**Module:** `apps/video/frames/`
+
+#### Renderer Pattern (renderer.py)
+```python
+from apps.video.frames import FramesRenderer
+
+# Check availability (node ≥22, ffmpeg, local binary)
+if FramesRenderer.is_available():
+    renderer = FramesRenderer(fps=30, workers="auto")
+    mp4_path = await renderer.render(
+        job_dir=Path("apps/video/frames/project/jobs/{job_id}"),
+        output_dir=Path("output/studio/video"),
+        progress_callback=progress_fn
+    )
+```
+
+#### Composition Builder Pattern (composition.py)
+```python
+# Dialogue segments → HTML composition
+segments = [
+    {"speaker": "Alice", "text": "Hello", "start_ms": 0, "duration_ms": 500},
+    {"speaker": "Bob", "text": "Hi there", "start_ms": 600, "duration_ms": 400},
+]
+
+html, assets = build_composition(
+    segments=segments,
+    width=1920, height=1080, fps=30,
+    audio_path=Path("audio.wav"),
+    hyperframes_json=Path("apps/video/frames/project/hyperframes.json")
+)
+# Write to job_dir; assets are relative paths (offline reference)
+```
+
+#### Dialogue Parser Pattern (dialogue.py)
+```python
+# Parse "Name: line" format → speaker + text segments
+lines = ["Alice: Hello there!", "Bob: Good morning"]
+segments = parse_dialogue(lines)
+# segments = [
+#   {"speaker": "Alice", "text": "Hello there!"},
+#   {"speaker": "Bob", "text": "Good morning"}
+# ]
+
+# Auto-assign voices from cache (rotates over available voices)
+with_voices = assign_voices(segments, voice_cache=tts.voice_list())
+# with_voices[0] = {..., "voice": "Binh"}  (rotates: Binh, Tuyen, Vinh, Doan, Ly, Ngoc, ...)
+```
+
+### Key Authoring Rules (Enforced by `hyperframes lint`)
+1. Every timed element needs `class="clip"` + `data-start`, `data-duration`, `data-track-index` attributes
+2. `<audio>` elements must have explicit `id` (else `media_missing_id` error)
+3. Deterministic only — no `Date.now()`, `Math.random()`, network fetches
+4. Reference assets via relative local paths (offline, no CDN)
+
+### Pipeline Integration (pipeline.py)
+```python
+# PipelineConfig defaults
+config = PipelineConfig(
+    render_mode="frames",  # default; use "face" for SadTalker mode
+    frames_fps=30,
+    frames_width=1920, frames_height=1080,
+    frames_workers="auto",  # parallelization
+    frames_gap_s=0.15,  # inter-line silence
+)
+
+# VideoPipeline._produce_frames() flow
+if config.render_mode == "frames":
+    # 1. Parse dialogue → segments + voice assignment
+    segments = parse_dialogue_from_script(...)
+    segments = assign_voices(segments, voice_cache)
+    
+    # 2. Synthesize per-line audio (offset by segment timing)
+    audio_path, timings = synthesize_dialogue_segments(segments)
+    
+    # 3. Build HTML composition (GSAP + speaker cards + captions)
+    html, assets = build_composition(
+        segments, audio_path, timings,
+        width=config.frames_width, height=config.frames_height,
+        fps=config.frames_fps, gap_s=config.frames_gap_s
+    )
+    
+    # 4. Render via HyperFrames (headless Chrome → FFmpeg)
+    mp4 = await FramesRenderer(workers=config.frames_workers).render(
+        job_dir, output_dir, progress_callback
+    )
+```
+
+### API Endpoint Pattern (api.py)
+```python
+@router.post("/studio/video/generate")
+async def generate_video(
+    prompt: str = Form(...),
+    render_mode: Literal["frames", "face"] = Form("frames"),
+    face_image: UploadFile | None = None,
+    ...
+):
+    # Validation: face_image required only in face mode
+    config.render_mode = render_mode
+    if config.render_mode == "face" and face_image is None:
+        raise HTTPException(422, "face_image required for realistic (face) mode")
+    
+    # Route to appropriate producer
+    if config.render_mode == "frames":
+        video_producer = FramesVideoProducer(...)
+    else:
+        video_producer = FaceVideoProducer(...)
+    
+    job_id = await video_producer.start_job(config)
+    return {"job_id": job_id, "status": "queued"}
+
+# Status includes frames_renderer_ready flag
+@router.get("/studio/video/status/{job_id}")
+async def video_status(job_id: str):
+    return {
+        "job_id": job_id,
+        "status": "processing",
+        "frames_renderer_ready": FramesRenderer.is_available(),
+        ...
+    }
+```
+
+---
+
+## 13. Security & Validation
 
 ### Input Validation
 All Pydantic models auto-validate:
@@ -469,5 +596,6 @@ All Pydantic models auto-validate:
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Audience:** Backend developers, code reviewers
+**Updated:** 2026-06-18

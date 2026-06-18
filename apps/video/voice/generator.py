@@ -62,6 +62,11 @@ class VoiceGenerator:
         self._extract_timestamps = extract_timestamps
         self._timestamp_extractor = None
 
+    @property
+    def available_voices(self) -> list[str]:
+        """Voice ids cached in the underlying TTS manager."""
+        return list(getattr(self._tts, "voice_cache", {}).keys())
+
     def _get_timestamp_extractor(self) -> Any:
         """Lazily initialize TimestampExtractor."""
         if self._timestamp_extractor is None:
@@ -77,6 +82,7 @@ class VoiceGenerator:
         target_duration_s: float | None = None,
         temperature: float = 0.8,
         progress_cb: Any | None = None,
+        extract_timestamps: bool | None = None,
     ) -> VoiceOutput:
         """Generate voice audio with optional timestamps.
 
@@ -180,9 +186,13 @@ class VoiceGenerator:
             if progress_cb:
                 progress_cb(70, "Duration adjusted" if target_duration_s else "Ready for timestamps")
 
-            # Step 5: Extract word timestamps
+            # Step 5: Extract word timestamps (per-call override wins)
+            want_timestamps = (
+                self._extract_timestamps if extract_timestamps is None
+                else extract_timestamps
+            )
             word_timestamps: list[dict[str, Any]] = []
-            if self._extract_timestamps:
+            if want_timestamps:
                 try:
                     extractor = self._get_timestamp_extractor()
                     # Whisper runs on final_wav (post speed-adjustment),

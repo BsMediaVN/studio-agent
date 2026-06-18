@@ -1,0 +1,14 @@
+{
+  "name": "vietvoice-frames-project",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "hyperframes render",
+    "lint": "hyperframes lint",
+    "check": "hyperframes lint && hyperframes validate && hyperframes inspect",
+    "preview": "hyperframes preview"
+  },
+  "devDependencies": {
+    "hyperframes": "0.6.110"
+  }
+}

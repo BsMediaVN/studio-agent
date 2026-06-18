@@ -36,6 +36,9 @@ VietVoice Studio is a production-ready Vietnamese Text-to-Speech (TTS) platform 
 
 ### Advanced Features
 - **LLM-powered script generation** - Auto-create dialogue from prompts (Claude/OpenAI)
+- **Video production (two modes)**:
+  - **Frames mode** (default) — Motion-graphic videos from text prompts, CPU-only, deterministic, offline (HyperFrames + local Chromium)
+  - **Face mode** — Realistic talking-head videos with SadTalker + optional body animation
 - **Workflow automation** - Webhook-triggered production pipelines
 - **LoRA fine-tuning** - Custom voice personalization via gradient-based training
 - **GPU acceleration** - LMDeploy optimization for NVIDIA GPUs
@@ -46,8 +49,9 @@ VietVoice Studio is a production-ready Vietnamese Text-to-Speech (TTS) platform 
 - FastAPI REST API (28 endpoints)
 - WebSocket real-time progress tracking
 - Gradio web interface with dark/light themes
-- Standalone web client (React + Tailwind)
+- Standalone web client (React + Tailwind, animated/realistic video mode toggle)
 - Python SDK with 4 inference backends
+- HyperFrames video render pipeline (motion-graphic output)
 
 ---
 
@@ -181,13 +185,18 @@ Alternative: openai (OpenAI SDK, requires OPENAI_API_KEY)
 - Docker GPU/CPU variants
 - Python SDK with 4 backends
 
+**Completed (v1.3.0)**
+- Frames video render mode (HyperFrames, motion-graphic, CPU-only, deterministic)
+- Dialogue parsing with auto voice rotation
+- HTML composition builder (GSAP animations, speaker cards, captions)
+
 **Planned**
-- Video integration (auto-sync audio to video)
 - Multi-language support (beyond Vietnamese)
 - Real-time streaming to platforms (TikTok, YouTube Live)
 - Advanced emotion/prosody control
 - Premium voice marketplace
 - Batch job queuing and scheduling
+- Deprecation of face mode `body/` and `composer/` modules (after production validation)
 
 ---
 
@@ -195,8 +204,11 @@ Alternative: openai (OpenAI SDK, requires OPENAI_API_KEY)
 
 ### Minimum Requirements
 - Python 3.10+
+- Node.js ≥ 22 (for HyperFrames frames render mode)
+- FFmpeg + FFprobe (for frames & face mode video composition)
 - 4GB RAM (CPU mode), 8GB VRAM (GPU mode)
 - 20GB disk space (models + output)
+- ~500 MB (HyperFrames Chromium + dependencies, installed once via `make setup-frames`)
 
 ### Core Dependencies
 - torch + torchaudio (with PyPI indexes for platform-specific builds)
@@ -209,6 +221,7 @@ Alternative: openai (OpenAI SDK, requires OPENAI_API_KEY)
 - lmdeploy (GPU optimization)
 - peft (LoRA support)
 - anthropic, openai (LLM SDKs)
+- **Video rendering:** hyperframes @0.6.110 (NPM, frames mode), opencv + imageio (face mode)
 
 ---
 

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help setup-gpu setup-cpu run docker-gpu check clean
+.PHONY: help setup-gpu setup-cpu setup-frames run docker-gpu check clean
 
 help:
 	@echo "Targets:"
@@ -86,7 +86,6 @@ uv:
 espeak:
 	@echo ">> Installing eSpeak NG..."
 	@if [ "$$(uname -o 2>/dev/null)" = "Msys" ] || [ "$$(uname -o 2>/dev/null)" = "Cygwin" ]; then \
-	   # Try winget first
 	   if command -v winget >/dev/null 2>&1; then \
 	       echo "Trying winget..."; \
 	       winget install -e --id eSpeak-NG.eSpeak-NG || { echo "Winget failed/not found. Opening download page..."; start https://github.com/espeak-ng/espeak-ng/releases; }; \
@@ -95,7 +94,7 @@ espeak:
 	       start https://github.com/espeak-ng/espeak-ng/releases; \
 	   fi; \
 	elif [ "$$(uname)" = "Darwin" ]; then \
-	    brew install espeak; \
+	    brew install espeak-ng; \
 	elif command -v apt >/dev/null 2>&1; then \
 	    sudo apt update && sudo apt install -y espeak-ng; \
 	elif command -v pacman >/dev/null 2>&1; then \
@@ -104,12 +103,17 @@ espeak:
 	    echo "Unknown OS/Manager. Please install espeak-ng manually."; \
 	fi
 
-setup: check-install-prereqs
+setup: check-install-prereqs setup-frames
 	uv sync
 
 setup-gpu: setup
-setup-cpu: check-install-prereqs
+setup-cpu: check-install-prereqs setup-frames
 	uv sync --no-default-groups
+
+# Provision the HyperFrames frames-mode engine ONCE (local pinned binary +
+# Puppeteer Chromium → render does zero network). Requires node>=22 + ffmpeg.
+setup-frames:
+	@cd apps/video/frames/project && npm install --no-audit --no-fund
 
 # Run the Studio backend (API + TTS + video pipeline; serves built FE on :8001)
 run:

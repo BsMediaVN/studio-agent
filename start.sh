@@ -1,7 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
-# Setup Python environment
+# Make a freshly-installed uv visible to this shell
+export PATH="$HOME/.local/bin:$PATH"
+
+# First run on a clean machine: install uv + system prereqs + deps + frames engine
+if ! command -v uv >/dev/null 2>&1; then
+  echo ">> uv not found — running one-time environment bootstrap (setup_env.py)..."
+  python3 setup_env.py
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Setup Python environment (idempotent)
 echo ">> Setting up Python environment..."
 make setup
 
