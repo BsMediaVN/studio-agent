@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { API_URL, WS_URL } from '@/lib/constants';
 
 type VideoJobStatus = {
@@ -50,6 +50,7 @@ const PIPELINE_STAGES: Record<RenderMode, { label: string; range: string; icon: 
 export function VideoPage() {
   const [prompt, setPrompt] = useState('');
   const [renderMode, setRenderMode] = useState<RenderMode>('frames');
+  const [faceAvailable, setFaceAvailable] = useState(true);
   const [voiceId, setVoiceId] = useState('Binh');
   const [duration, setDuration] = useState(30);
   const [burnSubs, setBurnSubs] = useState(true);
@@ -61,6 +62,18 @@ export function VideoPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Detect whether the server supports Realistic (face) mode; if not, disable it.
+  useEffect(() => {
+    fetch(`${API_URL}/studio/video/status`)
+      .then((r) => r.json())
+      .then((s) => {
+        const ok = !!s.face_engine_available;
+        setFaceAvailable(ok);
+        if (!ok) setRenderMode('frames');
+      })
+      .catch(() => setFaceAvailable(false));
+  }, []);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -191,21 +204,27 @@ export function VideoPage() {
           >
             {([
               { mode: 'frames' as RenderMode, title: 'Animated', sub: 'Motion graphic · no face' },
-              { mode: 'face' as RenderMode, title: 'Realistic', sub: 'SadTalker face' },
+              { mode: 'face' as RenderMode, title: 'Realistic',
+                sub: faceAvailable ? 'SadTalker face' : 'Unavailable on this server' },
             ]).map((opt) => {
               const active = renderMode === opt.mode;
+              const disabled = isGenerating || (opt.mode === 'face' && !faceAvailable);
               return (
                 <button
                   key={opt.mode}
-                  onClick={() => setRenderMode(opt.mode)}
-                  disabled={isGenerating}
+                  onClick={() => !disabled && setRenderMode(opt.mode)}
+                  disabled={disabled}
+                  title={opt.mode === 'face' && !faceAvailable
+                    ? 'Realistic mode needs SadTalker/OpenCV, not installed on this server'
+                    : undefined}
                   style={{
                     padding: '10px 12px',
                     borderRadius: 8,
                     border: `1px solid ${active ? 'var(--accent-1)' : 'transparent'}`,
                     background: active ? 'rgba(45,212,191,0.15)' : 'transparent',
                     color: active ? 'var(--accent-1)' : 'var(--text-2)',
-                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled && !active ? 0.45 : 1,
                     textAlign: 'left',
                     transition: 'all 0.15s',
                   }}

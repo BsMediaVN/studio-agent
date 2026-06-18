@@ -76,6 +76,13 @@ class VideoProducer:
         # Face image only needed for realistic (face) mode.
         face_path: Path | None = None
         if config.render_mode == "face":
+            face_anim = self._pipeline._face_anim
+            if face_anim is None or not getattr(face_anim, "is_available", False):
+                raise HTTPException(
+                    422,
+                    "Realistic (face) mode is unavailable on this server "
+                    "(SadTalker / OpenCV not installed). Use Animated mode.",
+                )
             if face_image is None:
                 raise HTTPException(422, "face_image is required for realistic (face) mode")
             face_path = await self._save_face_image(face_image, job_id)
