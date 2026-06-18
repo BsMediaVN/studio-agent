@@ -127,6 +127,31 @@ docs/                  Architecture & standards
 
 ---
 
+## 💛 Support the project · Ủng hộ dự án
+
+VietVoice Studio is free and open-source. If it saves you time — or you'd simply like to see it grow — a small donation keeps me motivated to keep building and improving it. Thank you! 🙏
+
+*VietVoice Studio là dự án miễn phí, mã nguồn mở. Nếu thấy hữu ích, một ly cà phê ủng hộ sẽ giúp mình có thêm động lực phát triển. Cảm ơn bạn rất nhiều!*
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="280">
+      <strong>🇻🇳 Vietcombank · VietQR</strong><br><br>
+      <img src="image/donate/vietqr-vietcombank.png" alt="VietQR — Vietcombank donation QR code" width="240"><br>
+      <sub><strong>NGUYEN VAN QUANG</strong><br>0431000241997</sub>
+    </td>
+    <td align="center" valign="top" width="280">
+      <strong>☕ Buy Me a Coffee</strong><br><br>
+      <a href="https://www.buymeacoffee.com/quangboon">
+        <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=quangboon&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me a Coffee">
+      </a><br>
+      <sub>Quét QR hoặc bấm nút để ủng hộ ☕</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Credits
 
 This project is built on **[VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS)** by **Phạm Nguyễn Ngọc Bảo** — the Vietnamese TTS engine, the preset voices, and the model weights (`pnnbao-ump/VieNeu-TTS*` on Hugging Face) are their work, used under the Apache License 2.0.
