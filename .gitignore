@@ -42,3 +42,16 @@ CLAUDE.md
 
 # Plans
 plans/
+
+# Experimental PoCs (local only)
+poc-hyperframes/
+
+# HyperFrames frames mode — ephemeral per-job compositions & render outputs
+# (node_modules already ignored above; committed scaffold = package.json,
+#  hyperframes.json, meta.json, index.html, assets/lib/)
+apps/video/frames/project/jobs/
+apps/video/frames/project/renders/
+apps/video/frames/project/transcript.json
+
+
+social/

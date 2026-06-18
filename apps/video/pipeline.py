@@ -13,13 +13,15 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from apps.video.composer.composer import CompositionConfig, VideoComposer
 from apps.video.composer.subtitles import generate_srt
-from apps.video.face.animator import FaceAnimator
-from apps.video.body.renderer import BodyRenderer
 from apps.video.voice.generator import VoiceGenerator, VoiceOutput
+
+if TYPE_CHECKING:  # heavy face/body stack imported lazily — frames mode skips it
+    from apps.video.body.renderer import BodyRenderer
+    from apps.video.face.animator import FaceAnimator
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,9 @@ _OUTPUT_DIR = _PROJECT_ROOT / "output" / "studio" / "video"
 class PipelineConfig:
     """Configuration for the video pipeline."""
 
+    # "frames" (default) = animated HTML composition via HyperFrames (no face
+    # image needed); "face" = photorealistic SadTalker talking head.
+    render_mode: Literal["frames", "face"] = "frames"
     voice_id: str = "Binh"
     target_duration_s: float | None = None
     temperature: float = 0.8
@@ -42,6 +47,12 @@ class PipelineConfig:
     burn_subtitles: bool = True
     composition: CompositionConfig = field(default_factory=CompositionConfig)
     keep_intermediates: bool = False
+    # frames mode rendering
+    frames_fps: int = 30
+    frames_width: int = 1920
+    frames_height: int = 1080
+    frames_workers: str | int = "auto"
+    frames_gap_s: float = 0.15
 
 
 class VideoPipeline:
@@ -74,7 +85,7 @@ class VideoPipeline:
     async def produce(
         self,
         job_id: str,
-        face_image: Path,
+        face_image: Path | None,
         dialogue_text: str,
         config: PipelineConfig | None = None,
         progress_cb: Callable[[int, str], None] | None = None,
@@ -109,15 +120,12 @@ class VideoPipeline:
     async def _produce_impl(
         self,
         job_id: str,
-        face_image: Path,
+        face_image: Path | None,
         dialogue_text: str,
         config: PipelineConfig,
         progress_cb: Callable[[int, str], None] | None,
     ) -> Path:
         """Internal pipeline implementation."""
-        face_image = Path(face_image).resolve()
-        if not face_image.exists():
-            raise FileNotFoundError(f"Face image not found: {face_image}")
         if not dialogue_text.strip():
             raise ValueError("Dialogue text cannot be empty")
 
@@ -138,6 +146,23 @@ class VideoPipeline:
         # Create job output directory
         job_dir = _OUTPUT_DIR / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
+
+        # Frames mode (default): animated composition, no face image required.
+        if config.render_mode == "frames":
+            try:
+                return await self._produce_frames(
+                    job_id, dialogue_text, config, job_dir, progress_cb,
+                )
+            except Exception as e:
+                logger.error("Frames pipeline failed for job %s: %s", job_id, e)
+                raise
+
+        # Face mode: requires a face image.
+        if face_image is None:
+            raise ValueError("face_image is required when render_mode='face'")
+        face_image = Path(face_image).resolve()
+        if not face_image.exists():
+            raise FileNotFoundError(f"Face image not found: {face_image}")
 
         try:
             # Stage 1: Voice Generation (0-30%)
@@ -220,6 +245,94 @@ class VideoPipeline:
         except Exception as e:
             logger.error("Pipeline failed for job %s: %s", job_id, e)
             raise
+
+    async def _produce_frames(
+        self,
+        job_id: str,
+        dialogue_text: str,
+        config: PipelineConfig,
+        job_dir: Path,
+        progress_cb: Callable[[int, str], None] | None,
+    ) -> Path:
+        """Frames mode: dialogue → per-line voice → HTML composition → MP4."""
+        from apps.video.frames import FramesRenderer
+        from apps.video.frames.composition import (
+            CompositionConfig as FramesCompositionConfig,
+            DialogueSegment,
+            assemble_job,
+        )
+        from apps.video.frames.dialogue import assign_voices, parse_dialogue
+
+        if not FramesRenderer.is_available():
+            raise RuntimeError(
+                "Frames mode unavailable: need node>=22, ffmpeg, and the local "
+                "HyperFrames install (run `make setup-frames`)."
+            )
+
+        lines = parse_dialogue(dialogue_text)
+        if not lines:
+            raise ValueError("No dialogue lines parsed from input text")
+
+        voices = assign_voices(
+            [ln.speaker for ln in lines], self._voice_gen.available_voices, config.voice_id,
+        )
+
+        segments: list[DialogueSegment] = []
+        for i, line in enumerate(lines):
+            if progress_cb:
+                progress_cb(int(i / len(lines) * 55), f"Voicing line {i + 1}/{len(lines)}...")
+            # Line-level captions need no word timestamps → skip Whisper per line.
+            vo = await self._voice_gen.generate(
+                text=line.text,
+                voice_id=voices[line.speaker],
+                output_dir=job_dir / f"line-{i}",
+                temperature=config.temperature,
+                extract_timestamps=False,
+            )
+            segments.append(DialogueSegment(
+                speaker=line.speaker, text=line.text,
+                audio_path=vo.audio_path, duration_s=vo.duration_s,
+            ))
+
+        if progress_cb:
+            progress_cb(60, "Building composition...")
+
+        comp_dir = FramesRenderer.project_dir() / "jobs" / job_id
+        assemble_job(
+            comp_dir, segments,
+            FramesCompositionConfig(
+                width=config.frames_width, height=config.frames_height,
+                fps=config.frames_fps, gap_s=config.frames_gap_s,
+            ),
+            gsap_src=FramesRenderer.gsap_path(),
+            hyperframes_json=FramesRenderer.project_dir() / "hyperframes.json",
+        )
+
+        def _render_progress(pct: int, msg: str) -> None:
+            if progress_cb:
+                progress_cb(60 + int(pct * 0.38), msg)
+
+        renderer = FramesRenderer(
+            width=config.frames_width, height=config.frames_height,
+            fps=config.frames_fps, workers=config.frames_workers,
+        )
+        try:
+            rendered = await renderer.render(comp_dir, job_dir, progress_cb=_render_progress)
+            final_video = job_dir / "final.mp4"
+            shutil.move(str(rendered), str(final_video))
+        finally:
+            # comp_dir is an engine-internal artifact under the shared HyperFrames
+            # project tree — always remove it (even on failure / keep_intermediates).
+            shutil.rmtree(comp_dir, ignore_errors=True)
+            if not config.keep_intermediates:
+                for line_dir in job_dir.glob("line-*"):
+                    shutil.rmtree(line_dir, ignore_errors=True)
+
+        if progress_cb:
+            progress_cb(100, "Video generation complete")
+        logger.info("Frames pipeline complete: job=%s, %d line(s), %s",
+                    job_id, len(segments), final_video.name)
+        return final_video
 
     async def _generate_voice(
         self,

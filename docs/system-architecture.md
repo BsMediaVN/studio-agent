@@ -83,8 +83,42 @@ Concurrency: jobs are serialized (`max_concurrent_jobs = 1`, `asyncio.Lock`) so 
 
 Orchestrated by `VideoPipeline` (`pipeline.py`); exposed via `apps/video/api.py` (registered on the Studio router, same JobManager + WebSocket-progress patterns).
 
+Two render modes are available; selected via `PipelineConfig.render_mode`:
+
+### 4a. Frames mode (default: `render_mode="frames"`)
+
+Fast, CPU-only, deterministic motion-graphic output via **HyperFrames** (headless-Chrome frame capture + FFmpeg):
+
 ```
-prompt + face image
+prompt (no image required)
+        │
+        ▼
+1. Script        LLM → dialogue (name: line pairs) + optional timeline
+        │
+        ▼
+2. Voice         apps/video/voice/  → VieNeu-TTS per-line → audio.wav (+ timing, voice rotation)
+        │
+        ▼
+3. Composition   apps/video/frames/composition.py → HTML + GSAP animations (speaker cards, captions, etc.)
+        │
+        ▼
+4. Render        apps/video/frames/renderer.py → HyperFrames binary (local pinned @0.6.110)
+                 headless Chromium → frame capture → FFmpeg encode
+        │
+        ▼
+   output/studio/video/{job_id}.mp4
+```
+
+Key config (`PipelineConfig`): `render_mode="frames"`, `frames_fps`, `frames_width/height`, `frames_workers`, `frames_gap_s` (inter-line silence). Runs on CPU; no GPU, no face image required, deterministic (same input → byte-identical output). Voices rotate over the TTS `voice_cache`.
+
+Required at provisioning: Node ≥22, FFmpeg/FFprobe on `PATH`, `make setup-frames` (installs HyperFrames + Chromium to `apps/video/frames/project/node_modules/` once). Offline after install.
+
+### 4b. Face mode: `render_mode="face"`
+
+Realistic talking-head output via **SadTalker** + bespoke Three.js body capture (legacy path, kept for production validation):
+
+```
+prompt + face image (required)
         │
         ▼
 1. Script        LLM → dialogue + timeline
@@ -105,9 +139,9 @@ prompt + face image
    output/studio/video/{job_id}.mp4
 ```
 
-Key config (`PipelineConfig`): `voice_id`, `target_duration_s`, `body_fps/width/height`, `burn_subtitles`, `body_test_mode` (placeholder body until Mixamo assets are added). Runs on CPU or GPU; on Apple Silicon SadTalker uses shared memory.
+Key config: `voice_id`, `target_duration_s`, `body_fps/width/height`, `burn_subtitles`. Runs on CPU or GPU; on Apple Silicon SadTalker uses shared memory. **Deprecation note:** The face path remains for production validation; once frames mode is proven end-to-end with real VieNeu-TTS in production, `body/` and `composer/` will be sunset.
 
-See [`video-pipeline-architecture.md`](video-pipeline-architecture.md) for the design rationale, style options, and risks.
+See [`video-pipeline-architecture.md`](video-pipeline-architecture.md) for design rationale and risks.
 
 ---
 
@@ -128,9 +162,9 @@ Model = transformer producing `<|speech_N|>` token streams; **NeuCodec** decodes
 
 ## 6. Deployment modes
 
-- **Single-port (production-static):** `./start.sh` builds the FE into `client/out`; the backend serves it on `:8001`. Rebuild FE after changes (backend reads from disk, no restart).
-- **Dev (two processes):** backend on `:8001` + `next dev` on `:3000` for hot reload.
-- **Docker:** see `docker/` (GPU and CPU/GGUF compose files) and [`Deploy.md`](Deploy.md).
+- **Single-port (production-static):** `./start.sh` builds the FE into `client/out`; the backend serves it on `:8001`. Rebuild FE after changes (backend reads from disk, no restart). Frames mode requires `make setup-frames` once at provisioning.
+- **Dev (two processes):** backend on `:8001` + `next dev` on `:3000` for hot reload. Frames mode requires `make setup-frames` once.
+- **Docker:** see `docker/` (GPU and CPU/GGUF compose files) and [`Deploy.md`](Deploy.md). Frames provisioning (Node + HyperFrames install) baked into image build for offline rendering.
 
 ---
 
