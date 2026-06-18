@@ -16,7 +16,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import Form, HTTPException, UploadFile
+from fastapi import File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -320,7 +320,9 @@ def register_video_endpoints(studio_app: Any) -> None:
 
     @studio_app.post("/video/generate")
     async def generate_video(
-        face_image: UploadFile | None = None,
+        # Accept str too: browsers (incl. cached builds) may send an empty
+        # face_image field in frames mode — tolerate it instead of 422-ing.
+        face_image: UploadFile | str | None = File(None),
         prompt: str = Form(..., min_length=1, max_length=2000),
         voice_id: str = Form(...),
         render_mode: Literal["frames", "face"] = Form("frames"),
@@ -365,7 +367,9 @@ def register_video_endpoints(studio_app: Any) -> None:
             body_test_mode=body_test_mode,
         )
 
-        job_id = await video_producer.start_job(face_image, config)
+        # Only a real uploaded file counts; an empty/string field → no image.
+        face_file = face_image if isinstance(face_image, UploadFile) else None
+        job_id = await video_producer.start_job(face_file, config)
         return {"status": "ok", "job_id": job_id}
 
     @studio_app.get("/video/download/{job_id}")
