@@ -86,7 +86,6 @@ uv:
 espeak:
 	@echo ">> Installing eSpeak NG..."
 	@if [ "$$(uname -o 2>/dev/null)" = "Msys" ] || [ "$$(uname -o 2>/dev/null)" = "Cygwin" ]; then \
-	   # Try winget first
 	   if command -v winget >/dev/null 2>&1; then \
 	       echo "Trying winget..."; \
 	       winget install -e --id eSpeak-NG.eSpeak-NG || { echo "Winget failed/not found. Opening download page..."; start https://github.com/espeak-ng/espeak-ng/releases; }; \
@@ -95,7 +94,7 @@ espeak:
 	       start https://github.com/espeak-ng/espeak-ng/releases; \
 	   fi; \
 	elif [ "$$(uname)" = "Darwin" ]; then \
-	    brew install espeak; \
+	    brew install espeak-ng; \
 	elif command -v apt >/dev/null 2>&1; then \
 	    sudo apt update && sudo apt install -y espeak-ng; \
 	elif command -v pacman >/dev/null 2>&1; then \

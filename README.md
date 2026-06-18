@@ -21,7 +21,7 @@ VietVoice Studio turns a text prompt or script into multi-character Vietnamese a
 🎙️ **Multi-character TTS** — generate dialogue / audiobook audio with automatic voice assignment per character.
 📝 **LLM script generation** — describe a scene, get a structured multi-character script (Claude / OpenAI).
 🧬 **Zero-shot voice cloning** — clone a voice from a few seconds of reference audio.
-🎬 **Talking-head video pipeline** — prompt + face image → MP4 of a character speaking (LLM script → voice → face animation → body animation → composition).
+🎬 **Prompt → video** — two modes: **Animated** (default, `frames`) renders a motion-graphic character video with captions from just a prompt (no face image, CPU-only, deterministic, offline via [HyperFrames](https://github.com/heygen-com/hyperframes)); **Realistic** (`face`) turns a face image + prompt into a lip-synced talking head (SadTalker).
 🖥️ **Web UI** — Next.js front-end (Studio / Video / Workflows / Single Voice / Settings).
 💻 **Runs locally** — CPU (GGUF quantized) or GPU; no third-party media APIs required (only an LLM for script generation).
 
@@ -49,8 +49,10 @@ VietVoice Studio turns a text prompt or script into multi-character Vietnamese a
                             │  src/vieneu/  +  NeuCodec  +  sea-g2p       │
                             └───────────────────────────────────────────┘
 
-   Video pipeline stages:  LLM script → VieNeu-TTS voice → SadTalker face
-                           → Three.js body → FFmpeg compose → final .mp4
+   Video pipeline (frames, default):  script → VieNeu-TTS voice → HTML composition
+                                      → HyperFrames render → final .mp4
+   Video pipeline (face):             script → VieNeu-TTS voice → SadTalker face
+                                      → Three.js body → FFmpeg compose → final .mp4
 ```
 
 Detailed docs: [`docs/system-architecture.md`](docs/system-architecture.md) · [`docs/video-pipeline-architecture.md`](docs/video-pipeline-architecture.md).
@@ -59,11 +61,14 @@ Detailed docs: [`docs/system-architecture.md`](docs/system-architecture.md) · [
 
 ## Quick start
 
-### Requirements
-- Python 3.10+ and [`uv`](https://github.com/astral-sh/uv)
-- Node.js 18+ (for the front-end)
-- FFmpeg (for the video pipeline)
-- ~16 GB RAM; GPU optional (CPU inference uses GGUF quantized models)
+### Prerequisites
+- **macOS or Linux**, with a package manager so the installer can fetch system tools:
+  - macOS → [Homebrew](https://brew.sh)
+  - Linux → `apt` (Debian/Ubuntu) or `pacman` (Arch)
+- **Git**, **curl**, and a system **Python 3** (only to run the bootstrap — the project's own Python is managed by `uv`).
+- ~16 GB RAM; GPU optional (CPU inference uses GGUF quantized models).
+
+Everything else — **`uv`, Node.js ≥22, FFmpeg, eSpeak NG, all Python deps, and the HyperFrames frames engine (Chromium)** — is installed automatically by the bootstrap below.
 
 ### Install & run
 
@@ -71,10 +76,20 @@ Detailed docs: [`docs/system-architecture.md`](docs/system-architecture.md) · [
 git clone <your-repo-url> vietvoice-studio
 cd vietvoice-studio
 
-# One-shot: sets up Python env, builds the front-end, serves on :8001
-./start.sh
+./start.sh          # first run auto-bootstraps everything, builds the FE, serves :8001
 # → open http://localhost:8001
 ```
+
+`start.sh` detects a missing `uv` on the first run and invokes the bootstrap for you. To run the setup explicitly (e.g. to see each step):
+
+```bash
+python3 setup_env.py    # one-time: uv + Node + FFmpeg + eSpeak NG + Python deps + frames engine
+./start.sh              # build FE + serve on :8001
+```
+
+> ⏳ **First run downloads the TTS models from Hugging Face** (and HyperFrames downloads Chromium once) — this is slow the first time, fast afterwards. On macOS, TTS runs on CPU (GGUF Q8).
+>
+> If a new `uv` isn't on your `PATH` in the current shell, either open a new terminal or run: `export PATH="$HOME/.local/bin:$PATH"`.
 
 ### Development (hot-reload)
 
