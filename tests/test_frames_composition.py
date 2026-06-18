@@ -39,6 +39,17 @@ def _tone(path: Path, freq: int, dur: float) -> Path:
     return path
 
 
+def _region_max_luma(mp4: Path, t: float, crop: str) -> int:
+    """Max luma in a cropped region at time t (caption text is near-white)."""
+    res = subprocess.run(
+        ["ffmpeg", "-ss", str(t), "-i", str(mp4),
+         "-vf", f"crop={crop},signalstats,metadata=print:file=-", "-frames:v", "1", "-f", "null", "-"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    ).stdout
+    m = re.search(r"signalstats\.YMAX=(\d+)", res)
+    return int(m.group(1)) if m else 0
+
+
 def _mean_volume_db(mp4: Path, start: float, dur: float) -> float:
     out = subprocess.run(
         ["ffmpeg", "-ss", str(start), "-t", str(dur), "-i", str(mp4),
@@ -124,5 +135,8 @@ async def test_multi_audio_sequencing(tmp_path: Path) -> None:
         # line 0 window [0,1.0] and line 1 window [1.15,2.15] both non-silent
         assert _mean_volume_db(mp4, 0.1, 0.8) > -45.0
         assert _mean_volume_db(mp4, 1.25, 0.8) > -45.0
+        # caption must actually be visible (regression: a GSAP opacity:0 tween
+        # once rendered the caption band blank). Bottom band has bright text.
+        assert _region_max_luma(mp4, 0.5, "1920:220:0:860") > 150
     finally:
         __import__("shutil").rmtree(job, ignore_errors=True)

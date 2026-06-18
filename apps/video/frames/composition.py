@@ -85,7 +85,6 @@ def build_composition(segments: list[DialogueSegment], cfg: CompositionConfig | 
     placed, total = _place(segments, cfg)
 
     clips: list[str] = []
-    fades: list[str] = []
     for p in placed:
         speaker = html.escape(p.seg.speaker or "")
         text = html.escape(p.seg.text or "")
@@ -108,14 +107,12 @@ def build_composition(segments: list[DialogueSegment], cfg: CompositionConfig | 
             f'      <div class="cap clip" data-start="{p.start}" data-duration="{p.duration}" '
             f'data-track-index="{_TRACK_CAPTION}" id="cap-{p.index}">{text}</div>'
         )
-        fades.append(f'      tl.from("#cap-{p.index}", {{ opacity: 0, y: 24, duration: 0.3 }}, {p.start});')
-        fades.append(f'      tl.from("#card-{p.index}", {{ opacity: 0, x: -24, duration: 0.3 }}, {p.start});')
 
     title = html.escape(cfg.title)
     return _TEMPLATE.format(
         width=cfg.width, height=cfg.height, total=total, bg=cfg.bg, fg=cfg.fg,
         accent=cfg.accent, font=cfg.font_family, title=title,
-        clips="\n".join(clips), fades="\n".join(fades),
+        clips="\n".join(clips),
     )
 
 
@@ -129,8 +126,10 @@ def assemble_job(
 ) -> Path:
     """Build a self-contained job dir: index.html + assets + project metadata.
 
-    Copies vendored GSAP and each line's wav into ``assets/`` (local relative
-    paths only — offline). Returns ``job_dir``.
+    Copies vendored GSAP + each line's wav into ``assets/`` (local relative
+    paths, offline). Element visibility is driven by HyperFrames' native
+    ``class="clip"`` timing; GSAP is present only to register an empty timeline
+    that ``hyperframes lint`` requires. Returns ``job_dir``.
     """
     cfg = cfg or CompositionConfig()
     job_dir = Path(job_dir)
@@ -178,10 +177,10 @@ _TEMPLATE = """<!doctype html>
 {clips}
     </div>
     <script>
+      // Empty paused timeline — required by hyperframes lint; visibility is
+      // handled by class="clip" timing, so NO opacity tweens (those hide clips).
       window.__timelines = window.__timelines || {{}};
-      const tl = gsap.timeline({{ paused: true }});
-{fades}
-      window.__timelines["main"] = tl;
+      window.__timelines["main"] = gsap.timeline({{ paused: true }});
     </script>
   </body>
 </html>
