@@ -811,6 +811,16 @@ async def serve_client():
 # Global exception handler — catches unhandled errors, logs them, returns clean JSON
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+
+@studio_app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Log 422 validation failures with the exact offending fields."""
+    logger.warning(
+        "422 validation on %s %s: %s", request.method, request.url.path, exc.errors(),
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @studio_app.exception_handler(Exception)
