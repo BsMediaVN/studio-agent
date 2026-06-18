@@ -365,7 +365,7 @@ class VideoPipeline:
         progress_cb: Callable[[int, str], None] | None,
     ) -> Path | None:
         """Stage 2: Generate face animation video."""
-        if not self._face_anim.is_available:
+        if self._face_anim is None or not self._face_anim.is_available:
             logger.warning("Face animation not available — skipping")
             if progress_cb:
                 progress_cb(55, "Face animation skipped (not available)")

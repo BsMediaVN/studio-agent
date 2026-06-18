@@ -215,16 +215,28 @@ def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
     global video_producer, _tts_manager_ref
     _tts_manager_ref = tts_manager
 
-    from apps.video.face.animator import FaceAnimator
-    from apps.video.body.renderer import BodyRenderer
     from apps.video.voice.generator import VoiceGenerator
-    from apps.video.composer.composer import VideoComposer
+    from apps.video.frames.renderer import FramesRenderer
     from apps.video.pipeline import VideoPipeline
 
-    face_anim = FaceAnimator(backend="sadtalker")
     voice_gen = VoiceGenerator(tts_manager, extract_timestamps=True)
-    body_renderer = BodyRenderer(fps=30, width=1280, height=720)
-    composer = VideoComposer()
+
+    # Face/realistic stack (SadTalker + body + composer) needs cv2/torch and may
+    # be unavailable. Frames mode does NOT need it — keep the pipeline working
+    # for frames even when the face stack fails to import/construct.
+    face_anim = body_renderer = composer = None
+    try:
+        from apps.video.face.animator import FaceAnimator
+        from apps.video.body.renderer import BodyRenderer
+        from apps.video.composer.composer import VideoComposer
+
+        face_anim = FaceAnimator(backend="sadtalker")
+        body_renderer = BodyRenderer(fps=30, width=1280, height=720)
+        composer = VideoComposer()
+    except Exception as e:
+        logger.warning(
+            "Realistic (face) video mode unavailable: %s — frames mode still enabled", e,
+        )
 
     pipeline = VideoPipeline(
         voice_gen=voice_gen,
@@ -237,8 +249,8 @@ def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info(
-        "Video pipeline initialized: face=%s, body=%dx%d",
-        face_anim.backend.name, body_renderer.width, body_renderer.height,
+        "Video pipeline initialized: frames=%s, face=%s",
+        FramesRenderer.is_available(), face_anim is not None,
     )
 
 
@@ -341,9 +353,10 @@ def register_video_endpoints(studio_app: Any) -> None:
                 video_pipeline_enabled=False,
             ).model_dump()
 
+        face_anim = video_producer._pipeline._face_anim
         return VideoStatusResponse(
-            face_engine_available=video_producer._pipeline._face_anim.is_available,
-            body_renderer_ready=True,
+            face_engine_available=bool(face_anim and getattr(face_anim, "is_available", False)),
+            body_renderer_ready=video_producer._pipeline._body_renderer is not None,
             frames_renderer_ready=FramesRenderer.is_available(),
             video_pipeline_enabled=True,
         ).model_dump()
