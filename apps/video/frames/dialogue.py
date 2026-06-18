@@ -16,6 +16,11 @@ from dataclasses import dataclass
 _SPEAKER_RE = re.compile(r"^(?=[\wÀ-ỹ .'-]*[A-Za-zÀ-ỹ])([\wÀ-ỹ .'-]{1,30}):\s*(.+)$")
 # A bare "Name:" marker with no spoken text → dropped, not voiced.
 _BARE_MARKER_RE = re.compile(r"^[\wÀ-ỹ .'-]{1,30}:\s*$")
+# Markdown noise to strip from pasted prose (headings, bullets, emphasis, rules).
+_MD_PREFIX_RE = re.compile(r"^[#>\-\*•\s]+")
+_MD_INLINE_RE = re.compile(r"[*_`]+")
+# Split prose into sentences so each caption stays short (keeps terminal punctuation).
+_SENT_RE = re.compile(r"[^.!?…]+[.!?…]+|\S[^.!?…]*$")
 _DEFAULT_SPEAKER = "Người kể"
 
 
@@ -25,12 +30,23 @@ class ParsedLine:
     text: str
 
 
-def parse_dialogue(text: str, default_speaker: str = _DEFAULT_SPEAKER) -> list[ParsedLine]:
-    """Parse a script into dialogue lines.
+def _clean_prose(line: str) -> str:
+    """Strip markdown markers from a pasted prose line."""
+    return _MD_INLINE_RE.sub("", _MD_PREFIX_RE.sub("", line)).strip()
 
-    Lines like ``Bình: Xin chào`` become ``(Bình, Xin chào)``; lines without a
-    marker are attributed to ``default_speaker``. Empty lines and bare ``Name:``
-    markers (no text) are dropped.
+
+def _sentences(text: str) -> list[str]:
+    """Break prose into sentence-sized chunks (for readable captions)."""
+    return [m.group(0).strip() for m in _SENT_RE.finditer(text) if m.group(0).strip()]
+
+
+def parse_dialogue(text: str, default_speaker: str = _DEFAULT_SPEAKER) -> list[ParsedLine]:
+    """Parse pasted content into dialogue/narration lines.
+
+    ``Bình: Xin chào`` → ``(Bình, Xin chào)`` (one turn per line). Prose lines
+    (no ``Name:`` marker) are markdown-stripped and split into sentences,
+    attributed to ``default_speaker``. Empty lines, markdown rules, and bare
+    ``Name:`` markers are dropped.
     """
     lines: list[ParsedLine] = []
     for raw in (text or "").splitlines():
@@ -39,9 +55,11 @@ def parse_dialogue(text: str, default_speaker: str = _DEFAULT_SPEAKER) -> list[P
             continue
         m = _SPEAKER_RE.match(raw)
         if m and m.group(2).strip():
-            lines.append(ParsedLine(m.group(1).strip(), m.group(2).strip()))
+            lines.append(ParsedLine(m.group(1).strip(), _MD_INLINE_RE.sub("", m.group(2)).strip()))
         elif not m:
-            lines.append(ParsedLine(default_speaker, raw))
+            cleaned = _clean_prose(raw)
+            for sentence in _sentences(cleaned):
+                lines.append(ParsedLine(default_speaker, sentence))
         # else: bare "Name:" with no text → dropped
     return [ln for ln in lines if ln.text.strip()]
 

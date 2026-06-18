@@ -281,6 +281,17 @@ class VideoPipeline:
             [ln.speaker for ln in lines], self._voice_gen.available_voices, config.voice_id,
         )
 
+        # Optional total-duration target: fit the speech to it by adjusting each
+        # line's speed, allocated proportionally by text length. None = natural.
+        line_targets: list[float | None] = [None] * len(lines)
+        if config.target_duration_s:
+            total_chars = sum(len(ln.text) for ln in lines) or 1
+            gap_total = config.frames_gap_s * max(0, len(lines) - 1)
+            speech_target = max(1.0, config.target_duration_s - gap_total)
+            line_targets = [
+                max(0.6, speech_target * len(ln.text) / total_chars) for ln in lines
+            ]
+
         segments: list[DialogueSegment] = []
         for i, line in enumerate(lines):
             if progress_cb:
@@ -290,6 +301,7 @@ class VideoPipeline:
                 text=line.text,
                 voice_id=voices.get(line.speaker) or config.voice_id,
                 output_dir=job_dir / f"line-{i}",
+                target_duration_s=line_targets[i],
                 temperature=config.temperature,
                 extract_timestamps=False,
             )

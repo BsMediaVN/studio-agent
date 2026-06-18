@@ -45,6 +45,14 @@ def test_parse_digit_colon_is_not_speaker() -> None:
     assert len(lines) == 1 and lines[0].speaker == "Người kể"
 
 
+def test_parse_prose_splits_sentences_and_strips_markdown() -> None:
+    lines = parse_dialogue("# Tiêu đề\nCâu một. Câu hai! Câu ba?")
+    texts = [ln.text for ln in lines]
+    assert "Tiêu đề" in texts                       # markdown '#' stripped
+    assert "Câu một." in texts and "Câu hai!" in texts and "Câu ba?" in texts
+    assert all(ln.speaker == "Người kể" for ln in lines)
+
+
 def test_assign_voices_rotates_and_prefers_default() -> None:
     v = assign_voices(["A", "B", "C", "A"], ["x", "y", "z"], default="y")
     assert v["A"] == "y"  # default goes first

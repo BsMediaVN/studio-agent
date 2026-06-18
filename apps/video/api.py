@@ -37,7 +37,8 @@ class VideoGenerateRequest(BaseModel):
     voice_id: str
     # "frames" (animated, default, no face image) | "face" (SadTalker realistic)
     render_mode: Literal["frames", "face"] = "frames"
-    target_duration_s: float = Field(default=30.0, ge=5, le=120)
+    # None = auto (length follows the content); set = fit content to this time.
+    target_duration_s: float | None = Field(default=None, ge=3, le=600)
     burn_subtitles: bool = True
     body_test_mode: bool = True  # True until Mixamo assets available
 
@@ -58,43 +59,11 @@ class VideoStatusResponse(BaseModel):
 class VideoProducer:
     """Manages video generation jobs: file I/O, job tracking, background tasks."""
 
-    def __init__(self, pipeline: Any, job_manager: Any, llm: Any = None):
+    def __init__(self, pipeline: Any, job_manager: Any):
         from apps.video.pipeline import VideoPipeline
         self._pipeline: VideoPipeline = pipeline
         self._jobs = job_manager
-        self._llm = llm  # LLMScriptGenerator — turns a topic prompt into a script
         self._output_files: dict[str, str] = {}
-
-    async def _build_script(
-        self, prompt: str, target_duration_s: float,
-    ) -> tuple[str, dict[str, str] | None]:
-        """Frames mode: expand a topic prompt into dialogue text + voice map.
-
-        Returns (dialogue_text, voice_map). Falls back to the verbatim prompt
-        (no voice map) if the LLM is unavailable or fails.
-        """
-        if self._llm is None:
-            return prompt, None
-        try:
-            from apps.studio_api import _auto_assign_voices
-
-            script = await self._llm.generate(
-                prompt, max_characters=4, target_duration_s=target_duration_s,
-            )
-            lines: list[str] = []
-            for scene in script.get("scenes", []):
-                for ln in scene.get("dialogue", []):
-                    text = (ln.get("text") or "").strip()
-                    if text:
-                        lines.append(f"{ln.get('character', 'Người kể')}: {text}")
-            if not lines:
-                return prompt, None
-            available = list(getattr(self._pipeline._voice_gen._tts, "voice_cache", {}).keys())
-            voice_map = _auto_assign_voices(script.get("characters", []), available)
-            return "\n".join(lines), voice_map
-        except Exception as e:
-            logger.warning("Script generation failed (%s) — using prompt verbatim", e)
-            return prompt, None
 
     async def start_job(
         self,
@@ -146,23 +115,14 @@ class VideoProducer:
                         ),
                     )
 
-                # Frames mode: expand the topic prompt into an AI script sized to
-                # the requested duration (face mode speaks the prompt verbatim).
-                dialogue_text = config.prompt
-                voice_map = None
-                if config.render_mode == "frames":
-                    await self._jobs.update(job_id, progress=1, current_step="AI đang viết kịch bản...")
-                    dialogue_text, voice_map = await self._build_script(
-                        config.prompt, config.target_duration_s,
-                    )
-
+                # Read the pasted content verbatim — TTS each line/sentence and
+                # render. Multi-speaker via "Name: line" markers.
                 output = await self._pipeline.produce(
                     job_id=job_id,
                     face_image=face_path,
-                    dialogue_text=dialogue_text,
+                    dialogue_text=config.prompt,
                     config=pipeline_config,
                     progress_cb=_progress,
-                    voice_map=voice_map,
                 )
 
                 self._output_files[job_id] = str(output)
@@ -271,14 +231,6 @@ def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
 
     voice_gen = VoiceGenerator(tts_manager, extract_timestamps=True)
 
-    # LLM script generator (topic prompt → dialogue script) for frames mode.
-    llm = None
-    try:
-        from apps.studio_api import LLMScriptGenerator
-        llm = LLMScriptGenerator()
-    except Exception as e:
-        logger.warning("LLM script generator unavailable: %s — prompts read verbatim", e)
-
     # Face/realistic stack (SadTalker + body + composer) needs cv2/torch and may
     # be unavailable. Frames mode does NOT need it — keep the pipeline working
     # for frames even when the face stack fails to import/construct.
@@ -303,12 +255,12 @@ def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
         composer=composer,
     )
 
-    video_producer = VideoProducer(pipeline, job_manager, llm)
+    video_producer = VideoProducer(pipeline, job_manager)
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info(
-        "Video pipeline initialized: frames=%s, face=%s, llm=%s",
-        FramesRenderer.is_available(), face_anim is not None, llm is not None,
+        "Video pipeline initialized: frames=%s, face=%s",
+        FramesRenderer.is_available(), face_anim is not None,
     )
 
 
@@ -326,7 +278,7 @@ def register_video_endpoints(studio_app: Any) -> None:
         prompt: str = Form(..., min_length=1, max_length=20000),
         voice_id: str = Form(...),
         render_mode: Literal["frames", "face"] = Form("frames"),
-        target_duration_s: float = Form(30.0, ge=5, le=120),
+        target_duration_s: float | None = Form(None, ge=3, le=600),
         burn_subtitles: bool = Form(True),
         body_test_mode: bool = Form(True),
     ) -> dict[str, str]:

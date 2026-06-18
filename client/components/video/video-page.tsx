@@ -52,7 +52,7 @@ export function VideoPage() {
   const [renderMode, setRenderMode] = useState<RenderMode>('frames');
   const [faceAvailable, setFaceAvailable] = useState(true);
   const [voiceId, setVoiceId] = useState('Binh');
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState<number | null>(null);  // null = Auto (from content)
   const [burnSubs, setBurnSubs] = useState(true);
   const [faceImage, setFaceImage] = useState<File | null>(null);
   const [facePreview, setFacePreview] = useState<string | null>(null);
@@ -116,7 +116,7 @@ export function VideoPage() {
       formData.append('prompt', prompt);
       formData.append('voice_id', voiceId);
       formData.append('render_mode', renderMode);
-      formData.append('target_duration_s', String(duration));
+      if (duration != null) formData.append('target_duration_s', String(duration));
       formData.append('burn_subtitles', String(burnSubs));
       formData.append('body_test_mode', 'true');
 
@@ -185,7 +185,7 @@ export function VideoPage() {
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
           {renderMode === 'frames'
-            ? 'Describe a topic — AI writes a Vietnamese dialogue script sized to your chosen duration, then renders an animated captioned video (no face image needed).'
+            ? 'Paste your script/content — it is read aloud verbatim with synced captions (no face image). Multi-speaker: use "Name: line" per turn.'
             : 'Upload a face image + write a prompt to generate a realistic talking-head video with lip-sync.'}
         </p>
       </div>
@@ -329,13 +329,13 @@ export function VideoPage() {
             }}
           >
             <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', display: 'block', marginBottom: 10 }}>
-              {renderMode === 'frames' ? 'Idea / Topic' : 'Script / Prompt'}
+              {renderMode === 'frames' ? 'Script / Content' : 'Script / Prompt'}
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={renderMode === 'frames'
-                ? 'e.g. "Giới thiệu về cà phê Việt Nam" — AI viết kịch bản hội thoại theo thời lượng bạn chọn'
+                ? 'Dán nội dung cần đọc thành video... (nhiều nhân vật: mỗi dòng "Tên: lời thoại")'
                 : 'Write what the character should say...'}
               rows={5}
               maxLength={20000}
@@ -395,32 +395,55 @@ export function VideoPage() {
               </select>
             </div>
 
-            {/* Duration */}
+            {/* Duration — Auto (length follows content) or fit to a fixed time */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>
-                Duration
+                Duration {duration == null && <span style={{ color: 'var(--accent-1)' }}>· Auto (theo nội dung)</span>}
               </label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {DURATION_PRESETS.map((d) => (
-                  <button
-                    key={d.value}
-                    onClick={() => setDuration(d.value)}
-                    style={{
-                      flex: 1,
-                      padding: '7px 0',
-                      borderRadius: 6,
-                      border: `1px solid ${duration === d.value ? 'var(--accent-1)' : 'var(--border)'}`,
-                      background: duration === d.value ? 'rgba(45,212,191,0.15)' : 'var(--surface-2)',
-                      color: duration === d.value ? 'var(--accent-1)' : 'var(--text-2)',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                {([{ label: 'Auto', value: null }, ...DURATION_PRESETS] as { label: string; value: number | null }[]).map((d) => {
+                  const active = duration === d.value;
+                  return (
+                    <button
+                      key={d.label}
+                      onClick={() => setDuration(d.value)}
+                      style={{
+                        padding: '7px 12px',
+                        borderRadius: 6,
+                        border: `1px solid ${active ? 'var(--accent-1)' : 'var(--border)'}`,
+                        background: active ? 'rgba(45,212,191,0.15)' : 'var(--surface-2)',
+                        color: active ? 'var(--accent-1)' : 'var(--text-2)',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+                <input
+                  type="number"
+                  min={3}
+                  max={600}
+                  placeholder="giây"
+                  value={duration != null && !DURATION_PRESETS.some((p) => p.value === duration) ? duration : ''}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setDuration(Number.isFinite(v) && v >= 3 ? Math.min(v, 600) : null);
+                  }}
+                  style={{
+                    width: 72,
+                    padding: '7px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-2)',
+                    color: 'var(--text-1)',
+                    fontSize: 12,
+                    outline: 'none',
+                  }}
+                />
               </div>
             </div>
 
