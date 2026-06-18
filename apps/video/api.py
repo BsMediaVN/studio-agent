@@ -33,7 +33,7 @@ _MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
 class VideoGenerateRequest(BaseModel):
     """Request parameters for video generation."""
 
-    prompt: str = Field(min_length=1, max_length=2000)
+    prompt: str = Field(min_length=1, max_length=20000)
     voice_id: str
     # "frames" (animated, default, no face image) | "face" (SadTalker realistic)
     render_mode: Literal["frames", "face"] = "frames"
@@ -323,7 +323,7 @@ def register_video_endpoints(studio_app: Any) -> None:
         # Accept str too: browsers (incl. cached builds) may send an empty
         # face_image field in frames mode — tolerate it instead of 422-ing.
         face_image: UploadFile | str | None = File(None),
-        prompt: str = Form(..., min_length=1, max_length=2000),
+        prompt: str = Form(..., min_length=1, max_length=20000),
         voice_id: str = Form(...),
         render_mode: Literal["frames", "face"] = Form("frames"),
         target_duration_s: float = Form(30.0, ge=5, le=120),

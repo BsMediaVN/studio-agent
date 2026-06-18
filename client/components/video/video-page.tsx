@@ -127,7 +127,10 @@ export function VideoPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(data.detail || `HTTP ${res.status}`);
+        const detail = Array.isArray(data.detail)
+          ? data.detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join('; ')
+          : data.detail;
+        throw new Error(detail || `HTTP ${res.status}`);
       }
 
       const { job_id } = await res.json();
@@ -335,7 +338,7 @@ export function VideoPage() {
                 ? 'e.g. "Giới thiệu về cà phê Việt Nam" — AI viết kịch bản hội thoại theo thời lượng bạn chọn'
                 : 'Write what the character should say...'}
               rows={5}
-              maxLength={2000}
+              maxLength={20000}
               style={{
                 width: '100%',
                 background: 'var(--surface-2)',
@@ -350,7 +353,7 @@ export function VideoPage() {
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{prompt.length}/2000</span>
+              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{prompt.length}/20000</span>
             </div>
           </div>
 
