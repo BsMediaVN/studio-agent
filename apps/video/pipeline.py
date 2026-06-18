@@ -89,6 +89,7 @@ class VideoPipeline:
         dialogue_text: str,
         config: PipelineConfig | None = None,
         progress_cb: Callable[[int, str], None] | None = None,
+        voice_map: dict[str, str] | None = None,
     ) -> Path:
         """Run the full video generation pipeline.
 
@@ -114,7 +115,7 @@ class VideoPipeline:
 
         async with self._semaphore:
             return await self._produce_impl(
-                job_id, face_image, dialogue_text, config, progress_cb,
+                job_id, face_image, dialogue_text, config, progress_cb, voice_map,
             )
 
     async def _produce_impl(
@@ -124,6 +125,7 @@ class VideoPipeline:
         dialogue_text: str,
         config: PipelineConfig,
         progress_cb: Callable[[int, str], None] | None,
+        voice_map: dict[str, str] | None = None,
     ) -> Path:
         """Internal pipeline implementation."""
         if not dialogue_text.strip():
@@ -151,7 +153,7 @@ class VideoPipeline:
         if config.render_mode == "frames":
             try:
                 return await self._produce_frames(
-                    job_id, dialogue_text, config, job_dir, progress_cb,
+                    job_id, dialogue_text, config, job_dir, progress_cb, voice_map,
                 )
             except Exception as e:
                 logger.error("Frames pipeline failed for job %s: %s", job_id, e)
@@ -253,6 +255,7 @@ class VideoPipeline:
         config: PipelineConfig,
         job_dir: Path,
         progress_cb: Callable[[int, str], None] | None,
+        voice_map: dict[str, str] | None = None,
     ) -> Path:
         """Frames mode: dialogue → per-line voice → HTML composition → MP4."""
         from apps.video.frames import FramesRenderer
@@ -273,7 +276,8 @@ class VideoPipeline:
         if not lines:
             raise ValueError("No dialogue lines parsed from input text")
 
-        voices = assign_voices(
+        # Prefer a caller-supplied (e.g. gender-aware) voice map; else rotate.
+        voices = voice_map or assign_voices(
             [ln.speaker for ln in lines], self._voice_gen.available_voices, config.voice_id,
         )
 
@@ -284,7 +288,7 @@ class VideoPipeline:
             # Line-level captions need no word timestamps → skip Whisper per line.
             vo = await self._voice_gen.generate(
                 text=line.text,
-                voice_id=voices[line.speaker],
+                voice_id=voices.get(line.speaker) or config.voice_id,
                 output_dir=job_dir / f"line-{i}",
                 temperature=config.temperature,
                 extract_timestamps=False,

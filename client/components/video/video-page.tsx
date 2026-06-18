@@ -182,7 +182,7 @@ export function VideoPage() {
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
           {renderMode === 'frames'
-            ? 'Write a prompt (or "Name: line" dialogue) to render an animated character video — no face image needed.'
+            ? 'Describe a topic — AI writes a Vietnamese dialogue script sized to your chosen duration, then renders an animated captioned video (no face image needed).'
             : 'Upload a face image + write a prompt to generate a realistic talking-head video with lip-sync.'}
         </p>
       </div>
@@ -326,12 +326,14 @@ export function VideoPage() {
             }}
           >
             <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', display: 'block', marginBottom: 10 }}>
-              Script / Prompt
+              {renderMode === 'frames' ? 'Idea / Topic' : 'Script / Prompt'}
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Write what the character should say..."
+              placeholder={renderMode === 'frames'
+                ? 'e.g. "Giới thiệu về cà phê Việt Nam" — AI viết kịch bản hội thoại theo thời lượng bạn chọn'
+                : 'Write what the character should say...'}
               rows={5}
               maxLength={2000}
               style={{
