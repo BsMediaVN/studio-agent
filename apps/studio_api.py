@@ -2426,10 +2426,10 @@ def main():
                 root_app.add_api_route(
                     f"/{_page}",
                     lambda _c=_content: HTMLResponse(_c),
-                    methods=["GET"],
+                    methods=["GET", "HEAD"],  # HEAD: Next.js route prefetch
                 )
 
-        @root_app.get("/")
+        @root_app.api_route("/", methods=["GET", "HEAD"])
         async def serve_root():
             index = _CLIENT_OUT / "index.html"
             if index.exists():
@@ -2443,12 +2443,20 @@ def main():
         # Serve _next/ static assets
         root_app.mount("/_next", StaticFiles(directory=_CLIENT_OUT / "_next"), name="next-static")
 
-        @root_app.get("/{path:path}")
+        @root_app.api_route("/{path:path}", methods=["GET", "HEAD"])
         async def serve_static_files(path: str):
-            """Serve remaining static files (icons, images, etc.)."""
-            exact_file = _CLIENT_OUT / path
-            if exact_file.exists() and exact_file.is_file():
-                return FileResponse(exact_file)
+            """Serve static assets + Next export pages; SPA-fallback to index."""
+            for candidate in (
+                _CLIENT_OUT / path,                 # asset (icon, image, ...)
+                _CLIENT_OUT / f"{path}.html",       # next export page (no trailing slash)
+                _CLIENT_OUT / path / "index.html",  # next export page (trailing slash)
+            ):
+                if candidate.is_file():
+                    return FileResponse(candidate)
+            # Unknown route → SPA shell so client-side routing can handle it.
+            index = _CLIENT_OUT / "index.html"
+            if index.is_file():
+                return FileResponse(index)
             return HTMLResponse("<h1>Not found</h1>", status_code=404)
     else:
         @root_app.get("/")
