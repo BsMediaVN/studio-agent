@@ -410,7 +410,7 @@ DURATION CONSTRAINT (CRITICAL):
         else:
             return await self._call_claude_cli(prompt, system)
 
-    async def complete_text(self, prompt: str, system: str = "") -> str:
+    async def complete_text(self, prompt: str, system: str = "", max_tokens: int = 64) -> str:
         """Freeform short-text completion (no JSON parsing) using the configured
         provider. Used for small side-tasks like B-roll keyword extraction —
         keeps a single LLM stack (DRY) instead of a second client."""
@@ -422,7 +422,7 @@ DURATION CONSTRAINT (CRITICAL):
                 raise RuntimeError("OPENAI_API_KEY not set")
             client = openai.OpenAI(api_key=api_key)
             resp = await loop.run_in_executor(None, lambda: client.chat.completions.create(
-                model=self.model, max_tokens=64,
+                model=self.model, max_tokens=max_tokens,
                 messages=[{"role": "system", "content": system},
                           {"role": "user", "content": prompt}],
             ))
@@ -434,7 +434,7 @@ DURATION CONSTRAINT (CRITICAL):
                 raise RuntimeError("ANTHROPIC_API_KEY not set")
             client = anthropic.Anthropic(api_key=api_key)
             resp = await loop.run_in_executor(None, lambda: client.messages.create(
-                model=self.model, max_tokens=64,
+                model=self.model, max_tokens=max_tokens,
                 system=system or "You are a helpful assistant.",
                 messages=[{"role": "user", "content": prompt}],
             ))

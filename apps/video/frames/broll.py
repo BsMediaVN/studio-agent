@@ -20,7 +20,11 @@ from urllib.parse import urlparse
 
 import httpx
 
+from apps.video.frames.broll_keywords import extract_keyword, extract_keywords
 from apps.video.frames.composition import DialogueSegment
+
+__all__ = ["BrollConfig", "attach_broll", "fetch_broll_image",
+           "extract_keyword", "extract_keywords"]
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +35,6 @@ _PEXELS_SEARCH = "https://api.pexels.com/v1/search"
 # external API response, so never let it point the server at arbitrary hosts).
 _ALLOWED_IMG_HOSTS = ("images.pexels.com",)
 _MAX_PIXELS = 40_000_000  # ~40MP decoded-size ceiling (decompression-bomb guard)
-_KEYWORD_SYSTEM = (
-    "You turn a line of Vietnamese narration into ONE short English search "
-    "phrase (1-4 words) naming a concrete, filmable visual scene for stock "
-    "footage. Output ONLY the phrase — no quotes, punctuation, or explanation."
-)
 
 
 @dataclass
@@ -105,18 +104,6 @@ def _validate_image(data: bytes) -> None:
         raise ValueError(f"image too large: {w}x{h} px")
 
 
-async def extract_keyword(text: str, llm) -> str:
-    """VN text → one English visual keyword. Returns '' on any failure."""
-    if not (text and text.strip()):
-        return ""
-    try:
-        raw = await llm.complete_text(text.strip()[:500], system=_KEYWORD_SYSTEM)
-        return " ".join((raw or "").split()).strip().strip('".')[:60]
-    except Exception as e:  # noqa: BLE001 — degrade, never break the job
-        logger.warning("broll keyword extraction failed: %s", e)
-        return ""
-
-
 def search_pexels(keyword: str, orientation: str, api_key: str) -> str | None:
     """Best Pexels photo URL for ``keyword``, or None on any failure/empty."""
     if not keyword or not api_key:
@@ -174,15 +161,16 @@ async def fetch_broll_image(text: str, *, llm, cfg: BrollConfig) -> Path | None:
 
 
 async def attach_broll(segments: list[DialogueSegment], *, llm, cfg: BrollConfig) -> None:
-    """Set ``seg.image_path`` per segment. Consecutive identical keywords reuse
-    one image (R6 — avoids jarring swaps). Failures leave image_path=None."""
+    """Set ``seg.image_path`` per segment. Keywords are extracted in ONE batched
+    LLM call (M2); consecutive identical keywords reuse one image (R6 — avoids
+    jarring swaps). Failures leave image_path=None (flat bg)."""
     if not cfg.enable or not segments:
         return
+    keywords = await extract_keywords([s.text for s in segments], llm)
     loop = asyncio.get_running_loop()
     last_kw: str | None = None
     last_path: Path | None = None
-    for seg in segments:
-        keyword = await extract_keyword(seg.text, llm)
+    for seg, keyword in zip(segments, keywords):
         if keyword and keyword == last_kw:
             seg.image_path = last_path
             continue

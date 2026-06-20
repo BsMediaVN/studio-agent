@@ -159,6 +159,21 @@ def _seg(text: str) -> DialogueSegment:
 
 
 @pytest.mark.asyncio
+async def test_extract_keywords_batch_parses_numbered() -> None:
+    llm = _llm("1. city skyline\n2. forest river\n")  # line 3 missing → ''
+    out = await broll.extract_keywords(["a", "b", "c"], llm)
+    assert out == ["city skyline", "forest river", ""]
+    assert llm.complete_text.call_count == 1  # ONE call for all lines (M2)
+
+
+@pytest.mark.asyncio
+async def test_extract_keywords_batch_error_returns_blanks() -> None:
+    llm = AsyncMock()
+    llm.complete_text = AsyncMock(side_effect=RuntimeError("llm down"))
+    assert await broll.extract_keywords(["a", "b"], llm) == ["", ""]
+
+
+@pytest.mark.asyncio
 async def test_attach_broll_consecutive_dedupe(tmp_path: Path) -> None:
     segs = [_seg("l1"), _seg("l2"), _seg("l3")]
     calls = {"n": 0}
@@ -167,9 +182,11 @@ async def test_attach_broll_consecutive_dedupe(tmp_path: Path) -> None:
         calls["n"] += 1
         return tmp_path / f"{broll._slug(kw)}.jpg"
 
-    llm = _llm(["city skyline", "city skyline", "forest river"])
+    # ONE batched LLM call returns all three keywords (M2).
+    llm = _llm("1. city skyline\n2. city skyline\n3. forest river")
     with patch.object(broll, "_fetch_by_keyword", side_effect=fake_fetch):
         await broll.attach_broll(segs, llm=llm, cfg=_cfg(tmp_path))
+    assert llm.complete_text.call_count == 1               # batched, not 3 calls
     assert segs[0].image_path == segs[1].image_path        # same kw reused
     assert segs[2].image_path != segs[0].image_path
     assert calls["n"] == 2                                  # only 2 fetches for 3 segs
