@@ -1,10 +1,31 @@
 # VietVoice Studio - Project Changelog
 
-**Format:** [Semantic Versioning](https://semver.org/) | **Updated:** 2026-06-18
+**Format:** [Semantic Versioning](https://semver.org/) | **Updated:** 2026-06-20
 
 ---
 
-## [1.3.0] — 2026-06-18 (Current)
+## [1.3.1] — 2026-06-20 (Current)
+
+### Added
+- **B-roll background imagery for frames mode** — optional Pexels API integration + local cache
+  - Per-dialogue-segment keyword extraction (via LLM) → Pexels photo search → cached download
+  - Graceful fallback to flat background on any network/rate-limit/API failure (never breaks jobs)
+  - GSAP Ken Burns animation (scale + subtle pan) over background image with dark scrim
+  - Deterministic offline rendering after first fetch (disk cache by slug)
+  - Per-job toggle from UI; requires `PEXELS_API_KEY` environment variable
+  - Config: `config.yaml` → `studio.video.broll` (enable, orientation, cache_dir, deduplication)
+  - Consecutive identical keywords reuse same image (avoids jarring transitions)
+
+### Technical Details
+- **New module:** `apps/video/frames/broll.py` (fetch, cache, keyword extraction)
+- **Modified:** `apps/video/frames/composition.py` (track 3: background image clip + Ken Burns)
+- **Config keys:** `frames_broll` (PipelineConfig + form field), `broll_available` (status response)
+- **Determinism caveat:** Pexels results may drift over time; cross-time/cross-machine byte-identical output NOT guaranteed for jobs with B-roll enabled
+- **Attribution:** Pexels license requires credit when published; self-hosted internal use documented in module README
+
+---
+
+## [1.3.0] — 2026-06-18 (Previous)
 
 ### Added
 - **Frames video render mode** (default) — Motion-graphic MP4 output via HyperFrames CLI

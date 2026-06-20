@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import shutil
 import time
@@ -41,6 +42,8 @@ class VideoGenerateRequest(BaseModel):
     target_duration_s: float | None = Field(default=None, ge=3, le=600)
     burn_subtitles: bool = True
     body_test_mode: bool = True  # True until Mixamo assets available
+    # frames mode only: fetch content-matched Pexels background imagery (opt-in).
+    frames_broll: bool = False
 
 
 class VideoStatusResponse(BaseModel):
@@ -50,6 +53,8 @@ class VideoStatusResponse(BaseModel):
     body_renderer_ready: bool
     frames_renderer_ready: bool
     video_pipeline_enabled: bool
+    # B-roll background imagery is usable only when a Pexels key is configured.
+    broll_available: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +102,7 @@ class VideoProducer:
             target_duration_s=config.target_duration_s,
             burn_subtitles=config.burn_subtitles,
             body_test_mode=config.body_test_mode,
+            frames_broll=config.frames_broll,
         )
 
         # Launch in background
@@ -248,11 +254,31 @@ def init_video_pipeline(tts_manager: Any, job_manager: Any) -> None:
             "Realistic (face) video mode unavailable: %s — frames mode still enabled", e,
         )
 
+    # Reuse the studio's LLM stack for B-roll keyword extraction (DRY).
+    try:
+        from apps.studio_api import LLMScriptGenerator
+        llm = LLMScriptGenerator()
+    except Exception as e:  # noqa: BLE001 — broll falls back to flat bg without it
+        logger.warning("LLM unavailable for B-roll keyword extraction: %s", e)
+        llm = None
+
+    # B-roll tunables (orientation, cache_dir) from config.yaml → studio.video.broll.
+    broll_settings: dict = {}
+    try:
+        import yaml
+        cfg_path = Path(__file__).resolve().parents[2] / "config.yaml"
+        data = yaml.safe_load(cfg_path.read_text()) or {}
+        broll_settings = (((data.get("studio") or {}).get("video") or {}).get("broll")) or {}
+    except Exception as e:  # noqa: BLE001 — defaults are fine without config
+        logger.warning("Could not read B-roll config: %s", e)
+
     pipeline = VideoPipeline(
         voice_gen=voice_gen,
         face_anim=face_anim,
         body_renderer=body_renderer,
         composer=composer,
+        llm=llm,
+        broll_settings=broll_settings,
     )
 
     video_producer = VideoProducer(pipeline, job_manager)
@@ -281,6 +307,7 @@ def register_video_endpoints(studio_app: Any) -> None:
         target_duration_s: float | None = Form(None, ge=3, le=600),
         burn_subtitles: bool = Form(True),
         body_test_mode: bool = Form(True),
+        frames_broll: bool = Form(False),
     ) -> dict[str, str]:
         """Start a video generation job.
 
@@ -317,6 +344,7 @@ def register_video_endpoints(studio_app: Any) -> None:
             target_duration_s=target_duration_s,
             burn_subtitles=burn_subtitles,
             body_test_mode=body_test_mode,
+            frames_broll=frames_broll,
         )
 
         # Only a real uploaded file counts; an empty/string field → no image.
@@ -359,12 +387,14 @@ def register_video_endpoints(studio_app: Any) -> None:
         """Get video pipeline status."""
         from apps.video.frames import FramesRenderer
 
+        broll_available = bool(os.environ.get("PEXELS_API_KEY"))
         if video_producer is None:
             return VideoStatusResponse(
                 face_engine_available=False,
                 body_renderer_ready=False,
                 frames_renderer_ready=FramesRenderer.is_available(),
                 video_pipeline_enabled=False,
+                broll_available=broll_available,
             ).model_dump()
 
         face_anim = video_producer._pipeline._face_anim
@@ -373,6 +403,7 @@ def register_video_endpoints(studio_app: Any) -> None:
             body_renderer_ready=video_producer._pipeline._body_renderer is not None,
             frames_renderer_ready=FramesRenderer.is_available(),
             video_pipeline_enabled=True,
+            broll_available=broll_available,
         ).model_dump()
 
     logger.info("Video pipeline endpoints registered")

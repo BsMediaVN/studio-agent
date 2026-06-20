@@ -58,6 +58,14 @@ studio:
       male: [Binh, Tuyen, Vinh]
       female: [Doan, Ly, Ngoc]
 
+  video:
+    # B-roll: content-matched background imagery for frames mode (Pexels).
+    # Gated by the per-job UI toggle + PEXELS_API_KEY in the environment
+    # (see .env.example). These keys tune the fetch when it runs:
+    broll:
+      orientation: landscape       # Pexels search bias: landscape | portrait | square
+      cache_dir: ./output/studio/video/broll-cache   # downloaded images cached here
+
   limits:
     max_script_chars: 10000
     max_concurrent_jobs: 1

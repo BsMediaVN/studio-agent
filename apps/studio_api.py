@@ -410,6 +410,51 @@ DURATION CONSTRAINT (CRITICAL):
         else:
             return await self._call_claude_cli(prompt, system)
 
+    async def complete_text(self, prompt: str, system: str = "") -> str:
+        """Freeform short-text completion (no JSON parsing) using the configured
+        provider. Used for small side-tasks like B-roll keyword extraction —
+        keeps a single LLM stack (DRY) instead of a second client."""
+        loop = asyncio.get_running_loop()
+        if self.provider == "openai":
+            import openai
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise RuntimeError("OPENAI_API_KEY not set")
+            client = openai.OpenAI(api_key=api_key)
+            resp = await loop.run_in_executor(None, lambda: client.chat.completions.create(
+                model=self.model, max_tokens=64,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": prompt}],
+            ))
+            return resp.choices[0].message.content or ""
+        if self.provider == "claude":
+            import anthropic
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise RuntimeError("ANTHROPIC_API_KEY not set")
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = await loop.run_in_executor(None, lambda: client.messages.create(
+                model=self.model, max_tokens=64,
+                system=system or "You are a helpful assistant.",
+                messages=[{"role": "user", "content": prompt}],
+            ))
+            return resp.content[0].text
+        # claude_cli (default) — uses local subscription, no API key.
+        claude_bin = shutil.which("claude")
+        if not claude_bin:
+            raise RuntimeError("Claude CLI not found")
+        full = f"{system}\n\n---\n\n{prompt}" if system else prompt
+        result = await loop.run_in_executor(None, lambda: subprocess.run(
+            [claude_bin, "-p", full, "--output-format", "json"],
+            capture_output=True, text=True, timeout=120,
+        ))
+        if result.returncode != 0:
+            raise RuntimeError(f"Claude CLI failed: {result.stderr[:200]}")
+        try:
+            return json.loads(result.stdout).get("result", result.stdout)
+        except json.JSONDecodeError:
+            return result.stdout
+
     async def _call_claude_cli(self, prompt: str, system: str) -> dict:
         """Call Claude via local CLI (uses subscription, no API key needed)."""
         import shutil

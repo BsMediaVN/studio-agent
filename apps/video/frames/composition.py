@@ -18,10 +18,13 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from apps.video.frames.composition_template import HTML_TEMPLATE as _TEMPLATE
+
 # Track indices — distinct tracks avoid same-track overlap (lint rule).
 _TRACK_AUDIO = 0
 _TRACK_CAPTION = 1
 _TRACK_CARD = 2
+_TRACK_BG = 3  # background B-roll image (one <img> clip per imaged segment)
 
 # Deterministic avatar palette (indexed by speaker order — no hashing on text).
 _AVATAR_COLORS = ["#2dd4bf", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa", "#34d399"]
@@ -36,6 +39,8 @@ class DialogueSegment:
     audio_path: Path
     duration_s: float
     gender: str = "F"
+    # Optional B-roll background image; None → flat-bg behaviour (unchanged).
+    image_path: Path | None = None
 
 
 @dataclass
@@ -77,12 +82,54 @@ def _place(segments: list[DialogueSegment], cfg: CompositionConfig) -> tuple[lis
     return placed, max(total, 0.0)
 
 
+def _bg_fragments(placed: list[_Placed], cfg: CompositionConfig) -> tuple[str, str, str]:
+    """Build (bg_block, bg_css, kenburns) for segments that carry an image.
+
+    Returns three empty strings when no segment has an image, so the no-image
+    path stays byte-identical to the flat-bg output.
+    """
+    imaged = [p for p in placed if p.seg.image_path is not None]
+    if not imaged:
+        return "", "", ""
+
+    # bg <img> clips (track 3) FIRST in DOM (painted behind) + a static scrim.
+    lines = [
+        f'      <img id="bg-{p.index}" class="bg clip" data-start="{p.start}" '
+        f'data-duration="{p.duration}" data-track-index="{_TRACK_BG}" '
+        f'src="assets/bg-{p.index}.jpg" alt="" />'
+        for p in imaged
+    ]
+    lines.append('      <div class="scrim"></div>')
+    bg_block = "\n".join(lines) + "\n"
+
+    # These fragments are inserted as .format() VALUES (not re-formatted), so
+    # braces here are literal single braces in the output.
+    bg_css = (
+        f"\n      .bg {{ position: absolute; top: 0; left: 0; width: {cfg.width}px; "
+        f"height: {cfg.height}px; object-fit: cover; will-change: transform; }}"
+        f"\n      .scrim {{ position: absolute; inset: 0; background: linear-gradient("
+        f"180deg, rgba(10,14,20,.25) 0%, rgba(10,14,20,.15) 45%, rgba(10,14,20,.85) 100%); }}"
+    )
+
+    # Ken Burns: transform-only tween per bg clip (NO opacity — that hides clips),
+    # positioned at the clip's start on the registered main timeline.
+    kenburns = "".join(
+        f'\n      window.__timelines["main"].fromTo("#bg-{p.index}", '
+        f'{{ scale: 1, xPercent: 0, yPercent: 0 }}, '
+        f'{{ scale: 1.08, xPercent: -2, yPercent: -2, duration: {p.duration}, ease: "none" }}, '
+        f'{p.start});'
+        for p in imaged
+    )
+    return bg_block, bg_css, kenburns
+
+
 def build_composition(segments: list[DialogueSegment], cfg: CompositionConfig | None = None) -> str:
     """Render dialogue segments → a deterministic HyperFrames index.html string."""
     if not segments:
         raise ValueError("build_composition requires at least one segment")
     cfg = cfg or CompositionConfig()
     placed, total = _place(segments, cfg)
+    bg_block, bg_css, kenburns = _bg_fragments(placed, cfg)
 
     clips: list[str] = []
     for p in placed:
@@ -112,7 +159,7 @@ def build_composition(segments: list[DialogueSegment], cfg: CompositionConfig | 
     return _TEMPLATE.format(
         width=cfg.width, height=cfg.height, total=total, bg=cfg.bg, fg=cfg.fg,
         accent=cfg.accent, font=cfg.font_family, title=title,
-        clips="\n".join(clips),
+        clips="\n".join(clips), bg_block=bg_block, bg_css=bg_css, kenburns=kenburns,
     )
 
 
@@ -140,48 +187,11 @@ def assemble_job(
     shutil.copy2(gsap_src, job_dir / "assets" / "lib" / "gsap.min.js")
     for i, seg in enumerate(segments):
         shutil.copy2(seg.audio_path, job_dir / "assets" / f"line-{i}.wav")
+        # B-roll background image (optional) — index matches build_composition.
+        if seg.image_path is not None:
+            shutil.copy2(seg.image_path, job_dir / "assets" / f"bg-{i}.jpg")
 
     (job_dir / "index.html").write_text(build_composition(segments, cfg), encoding="utf-8")
     (job_dir / "meta.json").write_text(json.dumps({"id": job_dir.name, "name": job_dir.name}))
     (job_dir / "hyperframes.json").write_text(Path(hyperframes_json).read_text())
     return job_dir
-
-
-_TEMPLATE = """<!doctype html>
-<html lang="vi" data-resolution="landscape">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width={width}, height={height}" />
-    <script src="assets/lib/gsap.min.js"></script>
-    <style>
-      * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-      html, body {{ width: {width}px; height: {height}px; overflow: hidden;
-        background: {bg}; color: {fg}; font-family: {font}; }}
-      .brand {{ position: absolute; top: 56px; right: 72px; font-size: 34px;
-        font-weight: 800; color: {accent}; letter-spacing: -1px; }}
-      .card {{ position: absolute; top: 56px; left: 72px; display: flex;
-        align-items: center; gap: 20px; }}
-      .avatar {{ width: 76px; height: 76px; border-radius: 50%; display: flex;
-        align-items: center; justify-content: center; font-size: 36px;
-        font-weight: 800; color: #0a0e14; }}
-      .name {{ font-size: 40px; font-weight: 700; }}
-      .cap {{ position: absolute; left: 50%; transform: translateX(-50%);
-        bottom: 120px; width: 78%; text-align: center; font-size: 56px;
-        font-weight: 600; line-height: 1.3; text-shadow: 0 2px 12px rgba(0,0,0,.6); }}
-    </style>
-  </head>
-  <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="{total}"
-         data-width="{width}" data-height="{height}">
-      <div class="brand">{title}</div>
-{clips}
-    </div>
-    <script>
-      // Empty paused timeline — required by hyperframes lint; visibility is
-      // handled by class="clip" timing, so NO opacity tweens (those hide clips).
-      window.__timelines = window.__timelines || {{}};
-      window.__timelines["main"] = gsap.timeline({{ paused: true }});
-    </script>
-  </body>
-</html>
-"""

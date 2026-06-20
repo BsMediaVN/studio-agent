@@ -54,6 +54,8 @@ export function VideoPage() {
   const [voiceId, setVoiceId] = useState('Binh');
   const [duration, setDuration] = useState<number | null>(null);  // null = Auto (from content)
   const [burnSubs, setBurnSubs] = useState(true);
+  const [broll, setBroll] = useState(false);
+  const [brollAvailable, setBrollAvailable] = useState(false);
   const [faceImage, setFaceImage] = useState<File | null>(null);
   const [facePreview, setFacePreview] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<VideoJobStatus | null>(null);
@@ -71,6 +73,7 @@ export function VideoPage() {
         const ok = !!s.face_engine_available;
         setFaceAvailable(ok);
         if (!ok) setRenderMode('frames');
+        setBrollAvailable(!!s.broll_available);
       })
       .catch(() => setFaceAvailable(false));
   }, []);
@@ -119,6 +122,7 @@ export function VideoPage() {
       if (duration != null) formData.append('target_duration_s', String(duration));
       formData.append('burn_subtitles', String(burnSubs));
       formData.append('body_test_mode', 'true');
+      if (renderMode === 'frames') formData.append('frames_broll', String(broll && brollAvailable));
 
       const res = await fetch(`${API_URL}/studio/video/generate`, {
         method: 'POST',
@@ -169,7 +173,7 @@ export function VideoPage() {
       setError(err instanceof Error ? err.message : 'Failed to start video generation');
       setIsGenerating(false);
     }
-  }, [faceImage, prompt, renderMode, voiceId, duration, burnSubs]);
+  }, [faceImage, prompt, renderMode, voiceId, duration, burnSubs, broll, brollAvailable]);
 
   const canGenerate =
     prompt.trim().length > 0 &&
@@ -477,6 +481,46 @@ export function VideoPage() {
                 />
               </button>
             </div>
+
+            {/* Background visuals (B-roll) — frames mode only */}
+            {renderMode === 'frames' && (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                  Background visuals (B-roll)
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3, var(--text-2))' }}>
+                    {brollAvailable ? 'relevant images behind captions' : 'needs PEXELS_API_KEY on server'}
+                  </span>
+                </span>
+                <button
+                  onClick={() => brollAvailable && setBroll(!broll)}
+                  disabled={!brollAvailable}
+                  style={{
+                    width: 40,
+                    height: 22,
+                    borderRadius: 11,
+                    border: 'none',
+                    background: broll && brollAvailable ? 'var(--accent-1)' : 'var(--border)',
+                    cursor: brollAvailable ? 'pointer' : 'not-allowed',
+                    opacity: brollAvailable ? 1 : 0.5,
+                    position: 'relative',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: broll && brollAvailable ? 20 : 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      transition: 'left 0.2s',
+                    }}
+                  />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Generate Button */}

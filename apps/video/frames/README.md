@@ -57,6 +57,49 @@ if FramesRenderer.is_available():          # node>=22 + ffmpeg + local binary
 `job_dir` must live under `project/jobs/`. The composition builder (Phase 02)
 writes `index.html` + `assets/` there before calling `render`.
 
+## B-roll background imagery (optional)
+
+Frames mode can fetch content-matched background images per dialogue segment for a cinematic effect. This is **opt-in** and **gracefully degrades to flat backgrounds** on any failure (network, rate limit, missing key, no result).
+
+**How it works:**
+1. Each dialogue line is converted to an English visual keyword (via LLM).
+2. Keyword → Pexels photo search → download + local disk cache (keyed by slug).
+3. Background `<img>` clip behind a dark scrim, animated with GSAP Ken Burns (scale 1.0→1.08 + subtle pan).
+4. Consecutive identical keywords reuse the same image (avoids jarring swaps).
+
+**Config** (`config.yaml`):
+```yaml
+studio:
+  video:
+    broll:
+      enable: false                              # per-job UI checkbox overrides
+      orientation: landscape                     # landscape | portrait | square
+      cache_dir: ./output/studio/video/broll-cache
+      per_scene: turn                            # dedupe consecutive speakers
+```
+
+**Required environment:**
+- `PEXELS_API_KEY` (free key from [pexels.com/api](https://www.pexels.com/api))
+  - Rate limit: ~200 requests/hour
+  - When key is missing or invalid, B-roll is automatically disabled (flat bg used instead)
+
+**UI toggle:** Frames mode shows a "Background visuals (B-roll)" checkbox.
+- Enabled only if `PEXELS_API_KEY` is present (`/video/status` returns `broll_available`).
+- Disabled with hint "needs PEXELS_API_KEY" when key is missing.
+
+**Fallback behavior (critical):**
+- Any failure (offline, rate limit, invalid image, LLM error) → logs warning → uses flat background.
+- B-roll problems **never break a video job**.
+
+**Determinism caveat:**
+- Results are deterministic + offline **after** the first fetch (disk cache).
+- Pexels results may drift over time, so cross-time/cross-machine byte-identical output is **not guaranteed** (unlike the rest of frames mode).
+
+**Attribution:**
+- Pexels license requires attribution when images are published.
+- For self-hosted internal use, document the credit obligation (no in-video burn required in v1).
+- Review attribution requirements before deploying to public/commercial audiences.
+
 ## Authoring rules (enforced by `hyperframes lint`)
 
 1. Every timed element needs `class="clip"` + `data-start` / `data-duration` / `data-track-index`.

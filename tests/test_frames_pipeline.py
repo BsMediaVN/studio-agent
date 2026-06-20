@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+import apps.video.frames.broll as broll_mod
+import apps.video.frames.composition as comp_mod
 from apps.video.frames.dialogue import assign_voices, parse_dialogue
 from apps.video.frames.renderer import FramesRenderer
 from apps.video.pipeline import PipelineConfig, VideoPipeline
@@ -114,5 +116,77 @@ async def test_produce_frames_end_to_end() -> None:
             capture_output=True, text=True, check=True,
         ).stdout.split()
         assert "video" in probe and "audio" in probe
+    finally:
+        __import__("shutil").rmtree(final.parent, ignore_errors=True)
+
+
+# --- B-roll wiring (Phase 05) — render patched, no HyperFrames needed ------
+
+async def _run_frames_broll(monkeypatch, *, frames_broll, attach):
+    """Drive _produce_frames with render/assemble patched; return captured segments."""
+    captured: dict = {}
+
+    def fake_assemble(comp_dir, segments, cfg=None, *, gsap_src, hyperframes_json):
+        captured["segments"] = list(segments)
+        Path(comp_dir).mkdir(parents=True, exist_ok=True)
+        return Path(comp_dir)
+
+    async def fake_render(self, comp_dir, out_dir, progress_cb=None, timeout_s=600.0):
+        out = Path(comp_dir) / f"{Path(comp_dir).name}.mp4"
+        out.write_bytes(b"\x00")
+        return out
+
+    monkeypatch.setattr(FramesRenderer, "is_available", staticmethod(lambda: True))
+    monkeypatch.setattr(FramesRenderer, "render", fake_render)
+    monkeypatch.setattr(comp_mod, "assemble_job", fake_assemble)
+    monkeypatch.setattr(broll_mod, "attach_broll", attach)
+
+    pipeline = VideoPipeline(voice_gen=_StubVoiceGen(), face_anim=None, body_renderer=None)
+    cfg = PipelineConfig(render_mode="frames", voice_id="Binh", frames_broll=frames_broll)
+    final = await pipeline.produce(
+        job_id="pytestbroll", face_image=None, dialogue_text="Một câu kể.", config=cfg,
+    )
+    return final, captured
+
+
+@pytest.mark.asyncio
+async def test_frames_broll_off_skips_attach(monkeypatch) -> None:
+    calls = {"n": 0}
+
+    async def attach(segments, *, llm, cfg):
+        calls["n"] += 1
+
+    final, captured = await _run_frames_broll(monkeypatch, frames_broll=False, attach=attach)
+    try:
+        assert calls["n"] == 0  # broll never invoked when off
+        assert all(s.image_path is None for s in captured["segments"])
+    finally:
+        __import__("shutil").rmtree(final.parent, ignore_errors=True)
+
+
+@pytest.mark.asyncio
+async def test_frames_broll_on_attaches_images(monkeypatch) -> None:
+    async def attach(segments, *, llm, cfg):
+        for s in segments:
+            s.image_path = Path("/cache/x.jpg")  # simulate a successful fetch
+
+    final, captured = await _run_frames_broll(monkeypatch, frames_broll=True, attach=attach)
+    try:
+        assert captured["segments"] and all(
+            s.image_path == Path("/cache/x.jpg") for s in captured["segments"]
+        )
+    finally:
+        __import__("shutil").rmtree(final.parent, ignore_errors=True)
+
+
+@pytest.mark.asyncio
+async def test_frames_broll_failure_still_completes(monkeypatch) -> None:
+    async def attach(segments, *, llm, cfg):
+        raise RuntimeError("pexels exploded")
+
+    final, captured = await _run_frames_broll(monkeypatch, frames_broll=True, attach=attach)
+    try:
+        assert final.exists() and final.name == "final.mp4"  # job survived broll failure
+        assert all(s.image_path is None for s in captured["segments"])  # flat-bg fallback
     finally:
         __import__("shutil").rmtree(final.parent, ignore_errors=True)
