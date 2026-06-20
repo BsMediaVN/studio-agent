@@ -386,8 +386,15 @@ def register_video_endpoints(studio_app: Any) -> None:
     async def video_status() -> dict[str, Any]:
         """Get video pipeline status."""
         from apps.video.frames import FramesRenderer
+        from apps.video.frames.broll_providers import provider_needs_key
 
-        broll_available = bool(os.environ.get("PEXELS_API_KEY"))
+        # Keyless providers (e.g. Openverse) are always available; key-based ones
+        # (Pexels) only when the key is set.
+        provider = "openverse"
+        if video_producer is not None:
+            provider = (video_producer._pipeline._broll_settings or {}).get("provider", "openverse")
+        key_env = provider_needs_key(provider)
+        broll_available = key_env is None or bool(os.environ.get(key_env))
         if video_producer is None:
             return VideoStatusResponse(
                 face_engine_available=False,

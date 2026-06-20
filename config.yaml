@@ -59,11 +59,12 @@ studio:
       female: [Doan, Ly, Ngoc]
 
   video:
-    # B-roll: content-matched background imagery for frames mode (Pexels).
-    # Gated by the per-job UI toggle + PEXELS_API_KEY in the environment
-    # (see .env.example). These keys tune the fetch when it runs:
+    # B-roll: content-matched background imagery for frames mode.
+    # Gated by the per-job UI toggle. The default provider (openverse) needs NO
+    # API key — works out of the box. Pexels is optional (set PEXELS_API_KEY).
     broll:
-      orientation: landscape       # Pexels search bias: landscape | portrait | square
+      provider: openverse          # openverse (Creative Commons, no key) | pexels (needs key)
+      orientation: landscape       # search bias: landscape | portrait | square
       cache_dir: ./output/studio/video/broll-cache   # downloaded images cached here
 
   limits:

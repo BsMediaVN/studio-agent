@@ -329,7 +329,10 @@ class VideoPipeline:
                 orientation = s.get("orientation") or (
                     "landscape" if config.frames_width >= config.frames_height else "portrait"
                 )
-                cfg_kw: dict[str, Any] = {"enable": True, "orientation": orientation}
+                cfg_kw: dict[str, Any] = {
+                    "enable": True, "orientation": orientation,
+                    "provider": s.get("provider", "openverse"),
+                }
                 if s.get("cache_dir"):
                     cfg_kw["cache_dir"] = Path(s["cache_dir"])
                 await attach_broll(
