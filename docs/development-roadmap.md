@@ -1,26 +1,27 @@
 # VietVoice Studio - Development Roadmap
 
-**Version:** 1.0 | **Last Updated:** 2026-06-18 | **Status:** In Progress
+**Version:** 1.0 | **Last Updated:** 2026-06-20 | **Status:** In Progress
 
 ---
 
-## Current Phase: v1.3.0 Video Expansion (100% Complete)
+## Current Phase: v1.3.x Frames Refinements (95% Complete)
 
 ### Phase Objectives
-Deliver a CPU-first video render pipeline (HyperFrames) as default, replacing implicit face-mode dependency. Enable motion-graphic video production without GPUs or face images.
+Deliver a CPU-first video render pipeline (HyperFrames) as default with optional content-driven background imagery. Enable motion-graphic video production without GPUs or face images, with cinematic background support.
 
-### Completed Milestones (100%)
+### Completed Milestones (95%)
 - ✅ **M1: Frames Renderer Architecture** — `FramesRenderer` subprocess wrapper + project layout
 - ✅ **M2: Composition Builder** — HTML/GSAP animation system + dialogue parsing
 - ✅ **M3: API Integration** — `render_mode` field, conditional `face_image` validation
 - ✅ **M4: Frontend UI** — Video mode toggle (Animated/Realistic), conditional upload
 - ✅ **M5: Provisioning** — `make setup-frames`, Docker integration, offline asset packaging
 - ✅ **M6: Documentation** — System architecture, API docs, frames module README
+- ✅ **M7: B-roll Imagery** — Pexels API integration, keyword extraction, caching, graceful fallback (2026-06-20)
 
 ### Release Status
-- **Version:** 1.3.0
-- **Shipped:** 2026-06-18
-- **Default behavior:** `render_mode="frames"` (animated video, CPU-only)
+- **v1.3.0** (2026-06-18): Core frames pipeline shipped
+- **v1.3.1** (2026-06-20): B-roll background imagery (optional, Pexels)
+- **Default behavior:** `render_mode="frames"` (animated video, CPU-only); B-roll opt-in via UI checkbox
 
 ---
 
@@ -68,7 +69,9 @@ Extend Vietnamese TTS pipeline to support Tamil, Khmer, Thai, and Lao with langu
 |---|---|---|
 | HyperFrames stability (0.6.110) | Medium — render determinism | Pin version, test on each update, maintain fallback to face mode |
 | Node ≥22 + FFmpeg availability | Low — standard tools | Provide Docker base image, installation docs |
-| Frames mode production validation | High — sunset decision | Monitor v1.3.0 in production for 3+ months before v2.0 |
+| Pexels API availability + rate limit | Medium — B-roll feature | Graceful fallback to flat bg, local disk cache, rate-limit resilience |
+| B-roll determinism | Low — offline after cache | Document non-determinism caveat; disclose to users when B-roll enabled |
+| Frames mode production validation | High — sunset decision | Monitor v1.3.x in production for 3+ months before v2.0 |
 | Multi-language phonemization quality | Medium — TTS quality | Validate with native speakers, maintain error budget |
 
 ---
@@ -86,7 +89,8 @@ Extend Vietnamese TTS pipeline to support Tamil, Khmer, Thai, and Lao with langu
 
 ### Completed Phases
 - **v1.0–v1.2.9** — Core TTS, voice cloning, script generation, basic Gradio UI
-- **v1.3.0** — Frames video render mode (current: shipped 2026-06-18)
+- **v1.3.0** — Frames video render mode (shipped 2026-06-18)
+- **v1.3.1** — B-roll background imagery (shipped 2026-06-20)
 
 ---
 

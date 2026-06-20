@@ -99,17 +99,22 @@ prompt (no image required)
 2. Voice         apps/video/voice/  → VieNeu-TTS per-line → audio.wav (+ timing, voice rotation)
         │
         ▼
-3. Composition   apps/video/frames/composition.py → HTML + GSAP animations (speaker cards, captions, etc.)
+3. B-roll        (optional) apps/video/frames/broll.py → per-line keyword → Pexels search
+        │                    → cached local image or flat background (graceful fallback)
         │
         ▼
-4. Render        apps/video/frames/renderer.py → HyperFrames binary (local pinned @0.6.110)
+4. Composition   apps/video/frames/composition.py → HTML + GSAP animations (speaker cards,
+                 captions, background track + Ken Burns pan/zoom if image available)
+        │
+        ▼
+5. Render        apps/video/frames/renderer.py → HyperFrames binary (local pinned @0.6.110)
                  headless Chromium → frame capture → FFmpeg encode
         │
         ▼
    output/studio/video/{job_id}.mp4
 ```
 
-Key config (`PipelineConfig`): `render_mode="frames"`, `frames_fps`, `frames_width/height`, `frames_workers`, `frames_gap_s` (inter-line silence). Runs on CPU; no GPU, no face image required, deterministic (same input → byte-identical output). Voices rotate over the TTS `voice_cache`.
+Key config (`PipelineConfig`): `render_mode="frames"`, `frames_fps`, `frames_width/height`, `frames_workers`, `frames_gap_s` (inter-line silence), `frames_broll` (per-job toggle for background imagery). Runs on CPU; no GPU, no face image required, deterministic (same input → byte-identical output). Voices rotate over the TTS `voice_cache`. B-roll (if enabled) fetches from Pexels API (requires `PEXELS_API_KEY` env); any failure gracefully degrades to flat background.
 
 Required at provisioning: Node ≥22, FFmpeg/FFprobe on `PATH`, `make setup-frames` (installs HyperFrames + Chromium to `apps/video/frames/project/node_modules/` once). Offline after install.
 
@@ -173,3 +178,4 @@ Model = transformer producing `<|speech_N|>` token streams; **NeuCodec** decodes
 - `text_settings` — chunk sizes.
 - `backbone_configs` / `codec_configs` — selectable model + codec variants (Hugging Face repos).
 - `studio` — active backbone/codec, device (`cpu`/`cuda`/`mps`/`xpu`), `port` (8001), `llm` provider, audio output settings, voice presets (male/female), limits (concurrency, timeout, cleanup).
+- `studio.video.broll` — B-roll imagery config: `enable` (default off), `orientation` (landscape/portrait/square), `cache_dir` (default `./output/studio/video/broll-cache`), `per_scene` (dedupe mode). Requires `PEXELS_API_KEY` environment variable; omitting it disables B-roll at runtime.

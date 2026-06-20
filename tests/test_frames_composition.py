@@ -94,6 +94,58 @@ def test_empty_raises() -> None:
         build_composition([])
 
 
+# --- B-roll background track (Phase 05) -----------------------------------
+
+def _img_seg(speaker: str, text: str, dur: float, img: str | None) -> DialogueSegment:
+    return DialogueSegment(
+        speaker=speaker, text=text, audio_path=Path("a.wav"),
+        duration_s=dur, image_path=Path(img) if img else None,
+    )
+
+
+def test_no_image_path_is_unchanged() -> None:
+    """image_path=None → no bg/scrim/tween artifacts (baseline preserved)."""
+    html = build_composition([_seg("A", "hi", Path("a.wav"), 1.0)])
+    assert 'class="bg' not in html
+    assert ".scrim" not in html and "<div class=\"scrim\">" not in html
+    assert ".fromTo(" not in html
+    # the empty-timeline script line is intact, with nothing appended after it
+    assert 'gsap.timeline({ paused: true });\n' in html
+
+
+def test_image_path_emits_bg_track_and_scrim() -> None:
+    html = build_composition([
+        _img_seg("A", "one", 1.0, "i0.jpg"),
+        _img_seg("B", "two", 1.0, "i1.jpg"),
+    ])
+    assert html.count('class="bg clip"') == 2
+    assert html.count('data-track-index="3"') == 2
+    assert 'src="assets/bg-0.jpg"' in html and 'src="assets/bg-1.jpg"' in html
+    assert '<div class="scrim"></div>' in html
+    assert ".bg {" in html and ".scrim {" in html
+    # bg <img> painted behind brand/caption (DOM order)
+    assert html.index('id="bg-0"') < html.index('class="brand"') < html.index('id="cap-0"')
+
+
+def test_ken_burns_is_transform_only_no_opacity() -> None:
+    html = build_composition([_img_seg("A", "one", 2.0, "i0.jpg")])
+    tweens = re.findall(r"\.fromTo\([^;]*\);", html)
+    assert len(tweens) == 1
+    assert "opacity" not in tweens[0]           # opacity would hide the clip
+    assert "scale" in tweens[0] and "xPercent" in tweens[0]
+    assert "{{" not in html and "}}" not in html  # no double-brace leakage
+
+
+def test_mixed_image_and_flat_segments() -> None:
+    """Some segments imaged, some not → only imaged ones get a bg <img>."""
+    html = build_composition([
+        _img_seg("A", "withimg", 1.0, "i0.jpg"),
+        _img_seg("B", "flat", 1.0, None),
+    ])
+    assert html.count('class="bg clip"') == 1
+    assert 'id="bg-0"' in html and 'id="bg-1"' not in html
+
+
 # --- integration tests (need HyperFrames) ---------------------------------
 
 @pytest.mark.skipif(not _AVAILABLE, reason="HyperFrames not installed")

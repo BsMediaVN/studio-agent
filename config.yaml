@@ -58,6 +58,15 @@ studio:
       male: [Binh, Tuyen, Vinh]
       female: [Doan, Ly, Ngoc]
 
+  video:
+    # B-roll: content-matched background imagery for frames mode.
+    # Gated by the per-job UI toggle. The default provider (openverse) needs NO
+    # API key — works out of the box. Pexels is optional (set PEXELS_API_KEY).
+    broll:
+      provider: openverse          # openverse (Creative Commons, no key) | pexels (needs key)
+      orientation: landscape       # search bias: landscape | portrait | square
+      cache_dir: ./output/studio/video/broll-cache   # downloaded images cached here
+
   limits:
     max_script_chars: 10000
     max_concurrent_jobs: 1

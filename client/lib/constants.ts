@@ -15,7 +15,6 @@ export const NAV_TABS = [
   { label: 'Studio', href: '/studio' },
   { label: 'Video', href: '/video' },
   { label: 'Workflows', href: '/workflows' },
-  { label: 'Single Voice', href: '/voice' },
   { label: 'Settings', href: '/settings' },
 ] as const;
 

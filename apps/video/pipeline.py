@@ -53,6 +53,8 @@ class PipelineConfig:
     frames_height: int = 1080
     frames_workers: str | int = "auto"
     frames_gap_s: float = 0.15
+    # B-roll background imagery (Pexels) — opt-in; needs PEXELS_API_KEY env.
+    frames_broll: bool = False
 
 
 class VideoPipeline:
@@ -75,11 +77,17 @@ class VideoPipeline:
         face_anim: FaceAnimator,
         body_renderer: BodyRenderer,
         composer: VideoComposer | None = None,
+        llm: Any = None,
+        broll_settings: dict | None = None,
     ):
         self._voice_gen = voice_gen
         self._face_anim = face_anim
         self._body_renderer = body_renderer
         self._composer = composer or VideoComposer()
+        # LLM for B-roll keyword extraction (frames mode); lazy-built if not injected.
+        self._llm = llm
+        # B-roll tunables from config.yaml (studio.video.broll): orientation, cache_dir.
+        self._broll_settings = broll_settings or {}
         self._semaphore = asyncio.Semaphore(1)
 
     async def produce(
@@ -310,6 +318,29 @@ class VideoPipeline:
                 audio_path=vo.audio_path, duration_s=vo.duration_s,
             ))
 
+        # Optional B-roll: attach a content-matched background image per segment.
+        # Best-effort — a failure here must never fail the job (flat bg fallback).
+        if config.frames_broll:
+            if progress_cb:
+                progress_cb(57, "Fetching background imagery...")
+            try:
+                from apps.video.frames.broll import BrollConfig, attach_broll
+                s = self._broll_settings
+                orientation = s.get("orientation") or (
+                    "landscape" if config.frames_width >= config.frames_height else "portrait"
+                )
+                cfg_kw: dict[str, Any] = {
+                    "enable": True, "orientation": orientation,
+                    "provider": s.get("provider", "openverse"),
+                }
+                if s.get("cache_dir"):
+                    cfg_kw["cache_dir"] = Path(s["cache_dir"])
+                await attach_broll(
+                    segments, llm=self._get_llm(), cfg=BrollConfig(**cfg_kw),
+                )
+            except Exception as e:  # noqa: BLE001 — degrade to flat bg, never break
+                logger.warning("B-roll attach failed for job %s: %s", job_id, e)
+
         if progress_cb:
             progress_cb(60, "Building composition...")
 
@@ -349,6 +380,17 @@ class VideoPipeline:
         logger.info("Frames pipeline complete: job=%s, %d line(s), %s",
                     job_id, len(segments), final_video.name)
         return final_video
+
+    def _get_llm(self) -> Any:
+        """Return the injected LLM, or lazy-construct one (env-driven provider).
+
+        DRY: prefers the instance wired in by ``init_video_pipeline``; falls back
+        to a fresh ``LLMScriptGenerator()`` so broll works in standalone use too.
+        """
+        if self._llm is None:
+            from apps.studio_api import LLMScriptGenerator
+            self._llm = LLMScriptGenerator()
+        return self._llm
 
     async def _generate_voice(
         self,

@@ -2,10 +2,10 @@
 
 ## Overview
 
-Hệ thống tạo video nhân vật hoàn chỉnh chạy local trên Mac 24GB RAM. Không phụ thuộc API bên thứ 3, chi phí = $0 (ngoài Claude subscription hiện tại).
+Hệ thống tạo video nhân vật hoàn chỉnh chạy local trên Mac 24GB RAM. Không phụ thuộc API bên thứ 3, chi phí = $0 (ngoài Claude subscription hiện tại). Hỗ trợ thêm background B-roll imagery (Pexels API, tùy chọn).
 
-**Input**: Ảnh mặt nhân vật + prompt mô tả scene
-**Output**: Video MP4 nhân vật nói chuyện + cử động
+**Input**: Prompt mô tả scene (+ ảnh mặt nếu dùng face mode)
+**Output**: Video MP4 nhân vật nói chuyện (motion-graphic hoặc face-animated)
 
 ---
 
